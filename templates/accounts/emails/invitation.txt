@@ -1,0 +1,12 @@
+Hello,
+
+You've been invited to the Port-Harcourt Oil & Gas Business School (PHOGBS) management platform as {{ invitation.get_role_display }}.
+
+Accept your invitation and set your password here:
+{{ accept_url }}
+
+This link expires on {{ invitation.expires_at|date:"j F Y, H:i" }} (West Africa Time) and can only be used once.
+
+If you weren't expecting this invitation, you can ignore this email.
+
+PHOGBS

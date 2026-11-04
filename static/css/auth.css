@@ -1,0 +1,745 @@
+/* PHOGBS management platform: sign-in and account setup screens. */
+
+:root {
+  --navy: #0b1f3a;
+  --navy-tile: #0d2340;
+  --navy-tile-alt: #0a1c35;
+  --card: #eff6ff;
+  --card-raised: #f7fbff;
+  --primary: #136fcf;
+  --primary-hover: #0f5fb3;
+  --primary-soft: #dbeafe;
+  --text: #101828;
+  --text-muted: #475467;
+  --text-subtle: #667085;
+  --placeholder: #98a2b3;
+  --border: #d0d5dd;
+  --disabled: #d0d5dd;
+  --error: #d92d20;
+  --success: #079455;
+  --success-strong: #12b76a;
+  --radius-card: 16px;
+  --radius-input: 4px;
+  --radius-button: 6px;
+  --focus-ring: 0 0 0 3px rgba(19, 111, 207, 0.25);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--navy);
+}
+
+/* Rounded-tile backdrop from the designs. */
+.auth-page {
+  min-height: 100vh;
+  background-color: var(--navy);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Crect x='2' y='2' width='124' height='124' rx='14' fill='%230c213d'/%3E%3Crect x='130' y='2' width='124' height='124' rx='14' fill='%230a1d36'/%3E%3Crect x='2' y='130' width='124' height='124' rx='14' fill='%230a1d36'/%3E%3Crect x='130' y='130' width='124' height='124' rx='14' fill='%230c213d'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+}
+
+.auth-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 48px 16px;
+}
+
+.auth-card {
+  position: relative;
+  width: 100%;
+  max-width: 704px;
+  padding: 40px 32px 40px;
+  background: var(--card);
+  border-radius: var(--radius-card);
+  box-shadow: 0 24px 48px -12px rgba(2, 8, 23, 0.45);
+}
+
+.auth-step {
+  margin: 0 0 16px;
+  text-align: right;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.auth-step span {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Brand lock-up */
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.brand-crest {
+  width: 36px;
+  height: auto;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.brand-name {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--navy);
+  letter-spacing: 0.01em;
+}
+
+.brand-abbr {
+  margin-top: 4px;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.35em;
+  color: var(--navy);
+}
+
+/* Icon badge */
+
+.icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 24px;
+  border-radius: 50%;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, #2f8ae6, var(--primary) 70%);
+  box-shadow: 0 6px 14px rgba(19, 111, 207, 0.35), inset 0 -3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.icon-badge--success {
+  background: radial-gradient(circle at 35% 30%, #3ee34a, #01c210 70%);
+  box-shadow: 0 6px 14px rgba(1, 194, 16, 0.3), inset 0 -3px 6px rgba(0, 0, 0, 0.12);
+}
+
+.icon-badge svg path,
+.icon-badge svg circle {
+  stroke-linecap: round;
+}
+
+/* Header */
+
+.auth-header {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.auth-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.auth-subtitle {
+  max-width: 440px;
+  margin: 8px auto 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.auth-body {
+  margin: 0 0 24px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.auth-footnote {
+  margin: 32px 0 0;
+  font-size: 14px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* Status line */
+
+.status-area:empty {
+  display: none;
+}
+
+.status {
+  margin: 0 0 24px;
+  font-size: 16px;
+}
+
+.status[hidden] {
+  display: none;
+}
+
+.status--error {
+  color: var(--error);
+}
+
+.status--success {
+  color: var(--success);
+}
+
+/* Fields */
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.field {
+  margin: 0 0 24px;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.field[hidden] {
+  display: none;
+}
+
+.field-label {
+  display: block;
+  margin: 0 0 8px;
+  padding: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.auth-form input[type="email"],
+.auth-form input[type="text"],
+.auth-form input[type="tel"],
+.auth-form input[type="password"] {
+  display: block;
+  width: 100%;
+  height: 54px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.auth-form input::placeholder {
+  color: var(--placeholder);
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+
+.auth-form input[readonly] {
+  color: var(--text);
+  cursor: default;
+}
+
+.auth-form input[readonly]:focus {
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.auth-form input[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+.field-error {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--error);
+}
+
+.field-error[hidden] {
+  display: none;
+}
+
+.field-aside {
+  margin: -16px 0 20px;
+  text-align: right;
+  font-size: 16px;
+}
+
+/* Password */
+
+.password-input {
+  position: relative;
+}
+
+.password-input input {
+  padding-right: 48px !important;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--text-subtle);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.password-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.password-toggle svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.password-toggle .icon-eye-off,
+.password-toggle[aria-pressed="true"] .icon-eye {
+  display: none;
+}
+
+.password-toggle[aria-pressed="true"] .icon-eye-off {
+  display: block;
+}
+
+.password-rules {
+  margin: -12px 0 32px;
+  padding: 12px 16px;
+  list-style: none;
+  font-size: 14px;
+  color: var(--text-muted);
+  background: var(--card-raised);
+  border-radius: 12px;
+}
+
+.password-rules li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.password-rules li::before {
+  content: "";
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #eaecf0 center / 14px no-repeat;
+}
+
+.password-rules li.is-met::before {
+  background-color: #dcfae6;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23079455' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+}
+
+.password-rules li.is-unmet::before {
+  background-color: #fee4e2;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c62828' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6 6 18'/%3E%3C/svg%3E");
+}
+
+/* Checkbox & radio */
+
+.checkbox,
+.radio {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.checkbox {
+  margin: 0 0 32px;
+  color: var(--text-muted);
+}
+
+.radio {
+  color: var(--text);
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkbox input,
+.radio input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+/* Buttons & links */
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 54px;
+  padding: 0 20px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+  text-decoration: none;
+  background: var(--primary);
+  border: 0;
+  border-radius: var(--radius-button);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.button:hover {
+  background: var(--primary-hover);
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.button:disabled,
+.button[aria-disabled="true"] {
+  color: rgba(255, 255, 255, 0.7);
+  background: var(--disabled);
+  cursor: not-allowed;
+}
+
+.button--small {
+  display: inline-flex;
+  width: auto;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.link,
+.link-strong {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.link-strong {
+  font-weight: 600;
+}
+
+.auth-footnote .link-strong {
+  color: var(--text-muted);
+}
+
+.link:hover,
+.link-strong:hover {
+  text-decoration: underline;
+}
+
+.link:focus-visible,
+.link-strong:focus-visible {
+  outline: none;
+  border-radius: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+/* Invitation details */
+
+.detail {
+  margin: 0 0 32px;
+}
+
+.detail-label {
+  margin: 0 0 8px;
+  font-size: 14px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.detail-value {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* Identity */
+
+.identity-name {
+  margin: 8px 0 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--primary);
+}
+
+.identity-name[hidden] {
+  display: none;
+}
+
+/* Upload */
+
+.upload {
+  min-height: 260px;
+  padding: 28px 16px;
+  text-align: center;
+  border: 1.5px dashed var(--border);
+  border-radius: 12px;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.upload.is-dragover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.upload.upload--progress {
+  border-color: var(--primary);
+}
+
+.upload.upload--done {
+  background: #fff;
+  border-color: var(--success-strong);
+}
+
+.upload-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+}
+
+.upload:not(.upload--progress):not(.upload--done) .upload-state--empty,
+.upload--progress .upload-state--progress,
+.upload--done .upload-state--done {
+  display: flex;
+}
+
+.upload-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background: var(--primary-soft);
+}
+
+.upload-icon svg {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.upload-icon--success {
+  background: #dcfae6;
+}
+
+.upload-icon--success svg circle {
+  fill: var(--success);
+  stroke: none;
+}
+
+.upload-icon--success svg path {
+  stroke: #fff;
+  stroke-width: 2.4;
+}
+
+.upload-text {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-muted);
+}
+
+.upload-trigger {
+  cursor: pointer;
+}
+
+.upload-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--placeholder);
+}
+
+.upload-hint--strong {
+  margin-top: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.upload-or {
+  margin: 16px 0;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-subtle);
+  background: #fff;
+  border-radius: 2px;
+}
+
+.upload-filename {
+  margin: 4px 0 0;
+  max-width: 100%;
+  font-size: 12px;
+  color: var(--text-subtle);
+  overflow-wrap: anywhere;
+}
+
+.file-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 2px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: #d92d20;
+  border-radius: 3px;
+}
+
+.upload-percent {
+  margin: 16px 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-subtle);
+}
+
+.progress {
+  width: 100%;
+  max-width: 312px;
+  height: 6px;
+  overflow: hidden;
+  background: var(--primary-soft);
+  border-radius: 3px;
+}
+
+.progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width 0.15s;
+}
+
+.upload-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-subtle);
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.upload-clear svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.upload-clear:hover {
+  color: var(--text);
+}
+
+.upload-clear:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.upload-state--empty input[type="file"]:focus-visible + *,
+.upload:focus-within {
+  outline: none;
+}
+
+.upload:has(input[type="file"]:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+/* Small screens */
+
+@media (max-width: 560px) {
+  .auth-shell {
+    align-items: flex-start;
+    padding: 24px 16px;
+  }
+
+  .auth-card {
+    padding: 28px 20px 32px;
+  }
+
+  .auth-title {
+    font-size: 22px;
+  }
+
+  .status,
+  .field-aside,
+  .checkbox,
+  .radio {
+    font-size: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

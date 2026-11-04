@@ -1,0 +1,30 @@
+{% extends "accounts/layout.html" %}
+
+{% block title %}Sign in{% endblock %}
+{% block heading %}Welcome back!{% endblock %}
+{% block subheading %}Sign in to access the PHOGBS management platform.{% endblock %}
+
+{% block content %}
+<form method="post" class="auth-form" novalidate data-auth-form data-require-filled>
+  {% csrf_token %}
+  {% include "accounts/partials/status.html" %}
+  {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
+
+  {% include "accounts/partials/field.html" with field=form.email %}
+  {% include "accounts/partials/password_field.html" with field=form.password %}
+
+  <p class="field-aside"><a class="link" href="{% url 'accounts:password_reset' %}">Forgot Password?</a></p>
+
+  <label class="checkbox">
+    {{ form.remember_me }}
+    <span>{{ form.remember_me.label }}</span>
+  </label>
+
+  <button type="submit" class="button">Login</button>
+</form>
+
+<p class="auth-footnote">
+  Having trouble accessing your account?
+  <a class="link-strong" href="mailto:{{ SUPPORT_EMAIL }}">Contact PHOGBS support</a>
+</p>
+{% endblock %}

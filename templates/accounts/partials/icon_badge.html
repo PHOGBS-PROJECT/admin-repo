@@ -1,0 +1,12 @@
+{% comment %}Round icon above the title. Pass icon = "user" | "mail" | "check".{% endcomment %}
+<div class="icon-badge{% if icon == 'check' %} icon-badge--success{% endif %}" aria-hidden="true">
+  {% if icon == "user" %}
+    <svg viewBox="0 0 24 24" width="28" height="28"><circle cx="12" cy="7.5" r="4" fill="currentColor"/><path d="M4 20.5c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5c0 .6-.4 1-1 1H5c-.6 0-1-.4-1-1Z" fill="currentColor"/></svg>
+  {% elif icon == "mail" %}
+    <svg viewBox="0 0 24 24" width="30" height="30"><rect x="2.5" y="4.5" width="19" height="15" rx="3.5" fill="currentColor"/><path d="m3.5 7.5 7.4 5.1c.7.5 1.5.5 2.2 0l7.4-5.1" fill="none" stroke="#136fcf" stroke-width="1.8" stroke-linecap="round"/></svg>
+  {% elif icon == "check" %}
+    <svg viewBox="0 0 24 24" width="32" height="32"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  {% elif icon == "alert" %}
+    <svg viewBox="0 0 24 24" width="30" height="30"><path d="M12 7.5v6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17" r="1.4" fill="currentColor"/></svg>
+  {% endif %}
+</div>

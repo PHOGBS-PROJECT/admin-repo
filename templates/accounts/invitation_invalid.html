@@ -1,0 +1,13 @@
+{% extends "accounts/layout.html" %}
+
+{% block title %}Invitation unavailable{% endblock %}
+{% block icon %}{% include "accounts/partials/icon_badge.html" with icon="alert" %}{% endblock %}
+{% block heading %}This invitation can't be used{% endblock %}
+{% block subheading %}The link is invalid, has expired, or has already been used. Ask your administrator to send a new invitation.{% endblock %}
+
+{% block content %}
+<a class="button" href="{% url 'accounts:login' %}">Go to sign in</a>
+<p class="auth-footnote">
+  Need help? <a class="link-strong" href="mailto:{{ SUPPORT_EMAIL }}">Contact PHOGBS support</a>
+</p>
+{% endblock %}

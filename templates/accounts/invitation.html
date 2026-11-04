@@ -1,0 +1,15 @@
+{% extends "accounts/layout.html" %}
+
+{% block title %}You're invited{% endblock %}
+{% block icon %}{% include "accounts/partials/icon_badge.html" with icon="user" %}{% endblock %}
+{% block heading %}You're invited to PHOGBS{% endblock %}
+{% block subheading %}You've been invited to access the PHOGBS management platform.{% endblock %}
+
+{% block content %}
+<dl class="detail">
+  <dt class="detail-label">Assigned role</dt>
+  <dd class="detail-value">{{ invitation.get_role_display }}</dd>
+</dl>
+<p class="auth-body">You will be able to access the {{ invitation.role_feature_area }} features available to your role after activating your account.</p>
+<a class="button" href="{% url 'accounts:invitation_password' %}">Accept Invitation</a>
+{% endblock %}

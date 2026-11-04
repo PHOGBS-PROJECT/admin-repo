@@ -1,0 +1,10 @@
+{% extends "accounts/layout.html" %}
+
+{% block title %}You are all set{% endblock %}
+{% block icon %}{% include "accounts/partials/icon_badge.html" with icon="check" %}{% endblock %}
+{% block heading %}You are all set!{% endblock %}
+{% block subheading %}Your account is ready. Welcome to PHOGBS. You can now access your workspace and get started.{% endblock %}
+
+{% block content %}
+<a class="button" href="{% url 'dashboard:home' %}">Go to Dashboard</a>
+{% endblock %}

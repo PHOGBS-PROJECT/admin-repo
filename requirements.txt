@@ -1,0 +1,5 @@
+Django==5.2.19
+djangorestframework==3.17
+django-environ==0.14
+psycopg[binary]==3.3.8
+Pillow==12

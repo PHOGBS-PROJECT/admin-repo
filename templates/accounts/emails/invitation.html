@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<body style="margin:0;padding:32px 16px;background:#0b1f3a;font-family:Arial,Helvetica,sans-serif;color:#101828;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#eff6ff;border-radius:16px;">
+    <tr><td style="padding:32px;">
+      <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#0b1f3a;letter-spacing:.02em;">PORT-HARCOURT OIL &amp; GAS BUSINESS SCHOOL</p>
+      <h1 style="margin:16px 0 8px;font-size:22px;">You're invited to PHOGBS</h1>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#475467;">You've been invited to the PHOGBS management platform as <strong style="color:#101828;">{{ invitation.get_role_display }}</strong>.</p>
+      <p style="margin:24px 0;"><a href="{{ accept_url }}" style="display:inline-block;background:#136fcf;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:6px;font-size:15px;">Accept Invitation</a></p>
+      <p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#475467;">This link expires on {{ invitation.expires_at|date:"j F Y, H:i" }} (West Africa Time) and can only be used once.</p>
+      <p style="margin:0;font-size:13px;line-height:1.5;color:#475467;">If you weren't expecting this invitation, you can ignore this email.</p>
+    </td></tr>
+  </table>
+</body>
+</html>

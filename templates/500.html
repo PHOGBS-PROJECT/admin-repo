@@ -1,0 +1,10 @@
+{% extends "accounts/layout.html" %}
+
+{% block title %}Something went wrong{% endblock %}
+{% block icon %}{% include "accounts/partials/icon_badge.html" with icon="alert" %}{% endblock %}
+{% block heading %}Something went wrong{% endblock %}
+{% block subheading %}Something went wrong on our end. Please try again shortly.{% endblock %}
+
+{% block content %}
+<a class="button" href="/">Try again</a>
+{% endblock %}

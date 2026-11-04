@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block body_class %}auth-page{% endblock %}
+
+{% block body %}
+<main class="auth-shell">
+  <section class="auth-card" aria-labelledby="auth-title">
+    {% if step %}<p class="auth-step"><span>{{ step }}</span> of {{ step_total|default:2 }}</p>{% endif %}
+    {% include "accounts/partials/logo.html" %}
+    {% block icon %}{% endblock %}
+    <header class="auth-header">
+      <h1 id="auth-title" class="auth-title">{% block heading %}{% endblock %}</h1>
+      {% block subheading_wrap %}<p class="auth-subtitle">{% block subheading %}{% endblock %}</p>{% endblock %}
+    </header>
+    {% block content %}{% endblock %}
+  </section>
+</main>
+{% endblock %}

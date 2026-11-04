@@ -1,0 +1,12 @@
+{% comment %}
+Form-level status line: errors in red, success messages in green, and the
+"Submitting…" text that auth.js shows while a form is being sent.
+{% endcomment %}
+<div class="status-area">
+  {% if form.non_field_errors %}
+    {% for error in form.non_field_errors %}<p class="status status--error" role="alert">{{ error }}</p>{% endfor %}
+  {% elif messages %}
+    {% for message in messages %}<p class="status status--{% if message.level_tag == 'error' %}error{% else %}success{% endif %}" role="status">{{ message }}</p>{% endfor %}
+  {% endif %}
+  <p class="status status--success" data-pending-status role="status" hidden>{{ pending_text|default:"Submitting…" }}</p>
+</div>

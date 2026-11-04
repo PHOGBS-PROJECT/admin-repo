@@ -1,0 +1,6 @@
+{% load auth_forms %}{% comment %}Text-like input with label and inline error. Pass `field`, optionally `label` and `placeholder`.{% endcomment %}
+<div class="field">
+  <label class="field-label" for="{{ field.id_for_label }}">{{ label|default:field.label }}</label>
+  {% if placeholder %}{% widget field placeholder=placeholder %}{% else %}{% widget field %}{% endif %}
+  {% for error in field.errors %}<p class="field-error" id="{{ field.auto_id }}_error">{{ error }}</p>{% endfor %}
+</div>

@@ -1,0 +1,4 @@
+{% load static %}{% comment %}Design empty state. Pass image (documents|calendar|chart), message, optional overlay.{% endcomment %}<div class="empty-state{% if overlay %} empty-state--overlay{% endif %}">
+  <img src="{% static 'img/illustrations/'|add:image|add:'.svg' %}" alt="" width="120" height="100">
+  <p>{{ message }}</p>
+</div>

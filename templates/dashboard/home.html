@@ -1,0 +1,13 @@
+{% extends "accounts/layout.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block icon %}{% include "accounts/partials/icon_badge.html" with icon="user" %}{% endblock %}
+{% block heading %}Welcome, {{ request.user.first_name|default:request.user.email }}{% endblock %}
+{% block subheading %}Signed in as {{ request.user.email }} · {{ request.user.get_role_display }}. The management dashboard hasn't been designed yet.{% endblock %}
+
+{% block content %}
+<form method="post" action="{% url 'accounts:logout' %}">
+  {% csrf_token %}
+  <button type="submit" class="button">Sign out</button>
+</form>
+{% endblock %}

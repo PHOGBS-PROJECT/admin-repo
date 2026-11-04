@@ -1,0 +1,25 @@
+{% extends "dashboard/app.html" %}
+{% comment %}Placeholder for navigation destinations whose module isn't built yet.{% endcomment %}
+
+{% block title %}{{ section_title }}{% endblock %}
+{% block breadcrumb %}<li><a href="{% url 'dashboard:home' %}">Workspace</a></li><li><span aria-current="page">{{ section_title }}</span></li>{% endblock %}
+
+{% block page %}
+<header class="page-header">
+  <div>
+    <p class="page-eyebrow">{{ section_group }}</p>
+    <h1 class="page-title">{{ section_title }}</h1>
+  </div>
+</header>
+<section class="panel">
+  <div class="panel-body">
+    <div class="empty-state empty-state--page">
+      {% load static %}<img src="{% static 'img/illustrations/documents.svg' %}" alt="" width="120" height="100">
+      <p class="empty-state-title">{{ section_title }} is coming soon</p>
+      <p>{{ section_description }}</p>
+      {% if query %}<p>Search isn't available yet, so we couldn't look up “{{ query }}”.</p>{% endif %}
+      <a class="button-primary" href="{% url 'dashboard:home' %}">Back to Overview</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

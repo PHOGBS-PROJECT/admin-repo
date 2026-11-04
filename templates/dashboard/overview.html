@@ -1,0 +1,207 @@
+{% extends "dashboard/app.html" %}
+{% load static %}
+{% comment %}
+Overview dashboard for school and super administrators, from
+design/Overview dashboard (School administrator & super admin)/. Each panel
+has the design's empty state for when there's no data.
+{% endcomment %}
+
+{% block title %}Overview{% endblock %}
+
+{% block page %}
+<header class="page-header">
+  <div>
+    <h1 class="page-title">{{ greeting }}, {{ request.user.first_name|default:request.user.get_role_display }}</h1>
+    <p class="page-lede">Here's an overview of your institution's activity and what needs your attention.</p>
+  </div>
+  <div class="page-header-aside">
+    {% if sample %}<span class="sample-chip" title="Programme, revenue, learner and schedule figures are illustrative until those modules are built. Staff figures are live.">Sample data</span>{% endif %}
+    <div class="date-pill">
+      <span class="date-pill-label">Today</span>
+      <span class="date-pill-value">{% include "dashboard/partials/icon.html" with name="calendar" size=18 %}<time datetime="{{ today|date:'Y-m-d' }}">{{ today|date:"d/m/Y" }}</time></span>
+    </div>
+  </div>
+</header>
+
+<section class="panel" aria-labelledby="metrics-heading">
+  <h2 class="panel-title" id="metrics-heading">Key Metrics</h2>
+  <div class="panel-body metric-grid">
+    {% for m in metrics %}
+    <article class="metric">
+      <div class="metric-body">
+        <div class="metric-head">
+          <h3 class="metric-label">{{ m.label }}</h3>
+          <span class="metric-icon">{% include "dashboard/partials/icon.html" with name=m.icon size=18 %}</span>
+        </div>
+        <p class="metric-value">{{ m.value }}</p>
+        <p class="delta delta--{{ m.delta.direction }}">
+          <span class="delta-mark" aria-hidden="true"></span>
+          <span class="delta-value">{% if m.delta.direction == "up" %}<span class="visually-hidden">Up </span>{% elif m.delta.direction == "down" %}<span class="visually-hidden">Down </span>{% endif %}{{ m.delta.text }}</span>
+          <span class="delta-period">vs last month</span>
+        </p>
+      </div>
+      <a class="metric-link" href="{{ m.url }}">{{ m.link_text }}{% include "dashboard/partials/icon.html" with name="arrow-right" %}</a>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="row-3">
+  <section class="panel" aria-labelledby="attention-heading">
+    <h2 class="panel-title" id="attention-heading">Needs Attention</h2>
+    <div class="panel-body">
+      {% if attention %}
+      <ul class="attention-list">
+        {% for item in attention %}
+        <li class="attention-item">
+          <span class="attention-icon">{% include "dashboard/partials/icon.html" with name=item.icon size=20 %}</span>
+          <div>
+            <h3 class="item-title">{{ item.title }}</h3>
+            <p class="item-text">{{ item.text }}</p>
+            <a class="arrow-link" href="{{ item.url }}">{{ item.link_text }}{% include "dashboard/partials/icon.html" with name="arrow-right" size=18 %}</a>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      {% include "dashboard/partials/empty_state.html" with image="documents" message="You are all caught up!" %}
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="schedule-heading">
+    <h2 class="panel-title" id="schedule-heading">Upcoming Schedule</h2>
+    <div class="panel-body">
+      {% if schedule %}
+      <ul class="schedule-list">
+        {% for event in schedule %}
+        <li>
+          <a class="schedule-item" href="{% url 'dashboard:coming_soon' 'course-delivery' %}">
+            <span class="date-badge" aria-hidden="true"><span class="date-badge-day">{{ event.day }}</span><span class="date-badge-month">{{ event.month }}</span></span>
+            <span class="schedule-text">
+              <span class="item-title">{{ event.title }}</span>
+              <span class="item-text"><span class="visually-hidden">{{ event.day }} {{ event.month }} · </span>{{ event.detail }}</span>
+            </span>
+            <span class="schedule-arrow">{% include "dashboard/partials/icon.html" with name="arrow-right" size=18 %}</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      {% include "dashboard/partials/empty_state.html" with image="calendar" message="You are all caught up!" %}
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="actions-heading">
+    <h2 class="panel-title" id="actions-heading">Quick Actions</h2>
+    <div class="panel-body">
+      <ul class="quick-actions">
+        <li><a class="quick-action" href="{% url 'admin:accounts_invitation_add' %}"><span class="quick-action-icon">{% include "dashboard/partials/icon.html" with name="plus" size=18 %}</span>Invite Staff</a></li>
+        <li><a class="quick-action" href="{% url 'dashboard:coming_soon' 'programmes' %}"><span class="quick-action-icon">{% include "dashboard/partials/icon.html" with name="plus" size=18 %}</span>Create Programme</a></li>
+        <li><a class="quick-action" href="{% url 'dashboard:coming_soon' 'learners' %}"><span class="quick-action-icon">{% include "dashboard/partials/icon.html" with name="list" size=18 %}</span>View Learners</a></li>
+        <li><a class="quick-action" href="{% url 'dashboard:coming_soon' 'reports' %}"><span class="quick-action-icon">{% include "dashboard/partials/icon.html" with name="report" size=18 %}</span>View Reports</a></li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<div class="row-2">
+  <section class="panel" aria-labelledby="enrolment-heading">
+    <div class="panel-title-row">
+      <h2 class="panel-title" id="enrolment-heading">Learner Enrolment Trend</h2>
+      <span class="range-chip">Last 12 months</span>
+    </div>
+    <div class="panel-body chart-body">
+      <div class="chart{% if not enrolment_chart.values %} chart--empty{% endif %}" data-chart="bars" data-source="enrolment-chart"
+           role="img" aria-label="Column chart of new learner enrolments per month for the last 12 months{% if not enrolment_chart.values %}: no data yet{% endif %}."></div>
+      {{ enrolment_chart|json_script:"enrolment-chart" }}
+      {% if not enrolment_chart.values %}
+      {% include "dashboard/partials/empty_state.html" with image="chart" message="No learner enrolment trend yet!" overlay=True %}
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="revenue-heading">
+    <div class="panel-title-row">
+      <h2 class="panel-title" id="revenue-heading">Revenue Trend</h2>
+      <span class="range-chip">Last 12 months</span>
+    </div>
+    <div class="panel-body chart-body">
+      <div class="chart{% if not revenue_chart.values %} chart--empty{% endif %}" data-chart="line" data-source="revenue-chart"
+           role="img" aria-label="Line chart of revenue per month for the last 12 months{% if not revenue_chart.values %}: no data yet{% endif %}."></div>
+      {{ revenue_chart|json_script:"revenue-chart" }}
+      {% if not revenue_chart.values %}
+      {% include "dashboard/partials/empty_state.html" with image="chart" message="No revenue trend yet!" overlay=True %}
+      {% endif %}
+    </div>
+  </section>
+</div>
+
+<section class="panel" aria-labelledby="programmes-heading" data-programme-table>
+  <div class="panel-title-row">
+    <h2 class="panel-title" id="programmes-heading">Programme Performance</h2>
+    <a class="panel-link" href="{% url 'dashboard:coming_soon' 'programmes' %}">View all programmes</a>
+  </div>
+  <div class="table-toolbar">
+    <div class="input-search">
+      {% include "dashboard/partials/icon.html" with name="search" size=18 %}
+      <label class="visually-hidden" for="programme-search">Search programmes</label>
+      <input id="programme-search" type="search" placeholder="Search programmes" data-table-search autocomplete="off"{% if not programmes %} disabled{% endif %}>
+    </div>
+    <div class="menu" data-menu>
+      <button type="button" class="button-outline" data-menu-button aria-expanded="false" aria-haspopup="true"{% if not programmes %} disabled{% endif %}>
+        {% include "dashboard/partials/icon.html" with name="filter" size=18 %}Filter<span class="filter-count" data-filter-count hidden></span>
+      </button>
+      <div class="menu-panel menu-panel--right" data-menu-panel hidden>
+        <p class="menu-heading">Status</p>
+        <label class="menu-option"><input type="radio" name="programme-status" value="" checked data-table-filter> All statuses</label>
+        {% for value, label in status_choices.items %}
+        <label class="menu-option"><input type="radio" name="programme-status" value="{{ value }}" data-table-filter> {{ label }}</label>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Programme</th>
+          <th scope="col">Enrolments</th>
+          <th scope="col">Completion</th>
+          <th scope="col">Revenue</th>
+          <th scope="col">Status</th>
+          <th scope="col"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in programmes %}
+        <tr data-row data-name="{{ p.name|lower }}" data-status="{{ p.status }}">
+          <th scope="row">{{ p.name }}</th>
+          <td>{{ p.enrolments }}</td>
+          <td>{{ p.completion }}</td>
+          <td>{{ p.revenue }}</td>
+          <td><span class="status-pill status-pill--{{ p.status }}">{{ p.status_label }}</span></td>
+          <td class="cell-actions">
+            <div class="menu" data-menu>
+              <button type="button" class="kebab" data-menu-button aria-expanded="false" aria-haspopup="true" aria-label="Actions for {{ p.name }}">
+                {% include "dashboard/partials/icon.html" with name="kebab" size=18 %}
+              </button>
+              <div class="menu-panel menu-panel--right" data-menu-panel hidden>
+                <a class="menu-item" href="{% url 'dashboard:coming_soon' 'programmes' %}">View programme</a>
+                <a class="menu-item" href="{% url 'dashboard:coming_soon' 'enrolments' %}">View enrolments</a>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if programmes %}
+    <p class="table-no-match" data-no-match hidden>No programmes match your search.</p>
+    {% else %}
+    {% include "dashboard/partials/empty_state.html" with image="documents" message="No programme or enrolments yet!" %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% load static %}
+{% comment %}
+Authenticated app shell from the "Overview dashboard" design: sidebar
+navigation, top bar with breadcrumb, search, notifications and account menu.
+Pages fill {% block page %} and may set {% block breadcrumb %}.
+{% endcomment %}
+
+{% block styles %}<link rel="stylesheet" href="{% static 'css/app.css' %}">{% endblock %}
+{% block body_class %}app-page{% endblock %}
+
+{% block body %}
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="app" data-app>
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="sidebar-brand">
+      <a class="brand" href="{% url 'dashboard:home' %}" aria-label="PHOGBS overview">
+        <img class="brand-crest" src="{% static 'img/phogbs-crest.png' %}" alt="" width="36" height="39">
+        <span class="brand-text">
+          <span class="brand-name">Port-Harcourt Oil &amp; Gas<br>Business School</span>
+          <span class="brand-abbr">PHOGBS</span>
+        </span>
+      </a>
+      <button type="button" class="sidebar-collapse" data-sidebar-collapse aria-pressed="false" aria-label="Collapse sidebar" title="Collapse sidebar">
+        {% include "dashboard/partials/icon.html" with name="collapse" %}
+      </button>
+    </div>
+
+    <button type="button" class="sidebar-search" data-focus-search>
+      {% include "dashboard/partials/icon.html" with name="search" %}<span class="nav-label">Search</span>
+    </button>
+
+    <nav class="sidebar-nav">
+      <p class="nav-heading">Workspace</p>
+      <ul>
+        {% url 'dashboard:home' as home_url %}
+        {% include "dashboard/partials/nav_link.html" with url=home_url icon="overview" label="Overview" %}
+      </ul>
+
+      <p class="nav-heading">Roles &amp; Permissions</p>
+      <ul>
+        <li>
+          <details class="nav-group">
+            <summary class="nav-link">
+              {% include "dashboard/partials/icon.html" with name="staff" %}<span class="nav-label">Staff Directory</span>
+              <span class="nav-badge" title="{{ staff_count }} active staff">{{ staff_count }}</span>
+              <span class="nav-chevron">{% include "dashboard/partials/icon.html" with name="chevron-down" size=18 %}</span>
+            </summary>
+            <ul>
+              {% url 'admin:accounts_user_changelist' as users_url %}
+              {% url 'admin:accounts_invitation_changelist' as invites_url %}
+              {% url 'admin:auth_group_changelist' as groups_url %}
+              {% include "dashboard/partials/nav_link.html" with url=users_url label="All staff" sub=True %}
+              {% include "dashboard/partials/nav_link.html" with url=invites_url label="Invitations" sub=True %}
+              {% include "dashboard/partials/nav_link.html" with url=groups_url label="Roles & permissions" sub=True %}
+            </ul>
+          </details>
+        </li>
+      </ul>
+
+      <p class="nav-heading">Academic Management</p>
+      <ul>
+        <li>
+          <details class="nav-group"{% if section == "programmes" or section == "courses" %} open{% endif %}>
+            <summary class="nav-link">
+              {% include "dashboard/partials/icon.html" with name="programme" %}<span class="nav-label">Program &amp; Courses</span>
+              <span class="nav-chevron">{% include "dashboard/partials/icon.html" with name="chevron-down" size=18 %}</span>
+            </summary>
+            <ul>
+              {% url 'dashboard:coming_soon' 'programmes' as u %}{% include "dashboard/partials/nav_link.html" with url=u label="Programmes" sub=True %}
+              {% url 'dashboard:coming_soon' 'courses' as u %}{% include "dashboard/partials/nav_link.html" with url=u label="Courses" sub=True %}
+            </ul>
+          </details>
+        </li>
+        {% url 'dashboard:coming_soon' 'enrolments' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="enrol" label="Enrolments" %}
+        {% url 'dashboard:coming_soon' 'course-delivery' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="delivery" label="Course Delivery" %}
+        {% url 'dashboard:coming_soon' 'assessments' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="assessment" label="Assessments" %}
+        {% url 'dashboard:coming_soon' 'results' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="results" label="Results" %}
+        {% url 'dashboard:coming_soon' 'certificates' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="certificate" label="Certificates" %}
+        {% url 'dashboard:coming_soon' 'events' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="events" label="Events" %}
+      </ul>
+
+      <p class="nav-heading">Finance</p>
+      <ul>
+        {% url 'dashboard:coming_soon' 'transactions' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="transactions" label="Transactions" %}
+        {% url 'dashboard:coming_soon' 'financial-reports' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="report" label="Financial Reports" %}
+      </ul>
+
+      <p class="nav-heading">Content Management</p>
+      <ul>
+        {% url 'dashboard:coming_soon' 'website-content' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="website" label="Website Content" %}
+        {% url 'dashboard:coming_soon' 'learning-resources' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="resource" label="Learning Resource" %}
+      </ul>
+
+      <p class="nav-heading">Insights</p>
+      <ul>
+        {% url 'dashboard:coming_soon' 'reports' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="insights" label="Reports" %}
+      </ul>
+    </nav>
+
+    <div class="sidebar-foot">
+      <section class="welcome-card" data-welcome-card aria-labelledby="welcome-title">
+        <svg class="welcome-art" viewBox="0 0 80 100" aria-hidden="true">
+          <path d="M22 0c0 0 22 26 22 44a22 22 0 0 1-44 0C0 26 22 0 22 0z" fill="#1d5c9c" opacity=".55"/>
+          <path d="M22 18c0 0 12 15 12 26a12 12 0 0 1-24 0c0-11 12-26 12-26z" fill="#178a4c"/>
+          <rect x="16" y="54" width="36" height="36" rx="5" fill="#f5f8fc"/>
+          <rect x="21" y="60" width="10" height="3" rx="1.5" fill="#136fcf"/>
+          <rect x="21" y="67" width="26" height="2" rx="1" fill="#d0d5dd"/>
+          <rect x="21" y="72" width="20" height="2" rx="1" fill="#d0d5dd"/>
+          <rect x="21" y="77" width="23" height="2" rx="1" fill="#d0d5dd"/>
+        </svg>
+        <button type="button" class="welcome-close" data-welcome-close aria-label="Dismiss welcome message">
+          {% include "dashboard/partials/icon.html" with name="close" size=18 %}
+        </button>
+        <h2 class="welcome-title" id="welcome-title">Welcome to PHOGBS</h2>
+        <p class="welcome-text">Get to know your Dashboard with our short walkthrough course.</p>
+        <a class="welcome-button" href="{% url 'dashboard:coming_soon' 'tutorial' %}">Start Tutorial</a>
+      </section>
+
+      <div class="sidebar-user">
+        <span class="avatar avatar--light" aria-hidden="true">
+          {% include "dashboard/partials/icon.html" with name="user" size=22 %}
+          <span class="presence"></span>
+        </span>
+        <span class="sidebar-user-text">
+          <span class="sidebar-user-name">{{ request.user.get_full_name|default:request.user.email }}</span>
+          <span class="role-pill">{{ request.user.get_role_display }}</span>
+        </span>
+        <form method="post" action="{% url 'accounts:logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="logout-button" aria-label="Sign out" title="Sign out">
+            {% include "dashboard/partials/icon.html" with name="logout" %}
+          </button>
+        </form>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-scrim" data-sidebar-close hidden></div>
+
+  <div class="app-main">
+    <header class="topbar">
+      <button type="button" class="icon-button topbar-menu" data-sidebar-toggle aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation">
+        {% include "dashboard/partials/icon.html" with name="menu" %}
+      </button>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <ol>{% block breadcrumb %}<li><span>Workspace</span></li><li><span aria-current="page">Overview</span></li>{% endblock %}</ol>
+      </nav>
+
+      <form class="topbar-search" role="search" method="get" action="{% url 'dashboard:coming_soon' 'search' %}">
+        <label class="visually-hidden" for="global-search">Search</label>
+        {% include "dashboard/partials/icon.html" with name="search" %}
+        <input id="global-search" type="search" name="q" placeholder="Search people, programmes, payments…" autocomplete="off" value="{{ query|default:'' }}">
+      </form>
+
+      <a class="icon-button icon-button--outlined" href="{% url 'dashboard:coming_soon' 'notifications' %}" aria-label="Notifications" title="Notifications">
+        {% include "dashboard/partials/icon.html" with name="bell" %}
+      </a>
+
+      <div class="menu" data-menu>
+        <button type="button" class="account-button" data-menu-button aria-expanded="false" aria-haspopup="true" aria-label="Account menu">
+          <span class="avatar avatar--light avatar--sm" aria-hidden="true">{% include "dashboard/partials/icon.html" with name="user" size=18 %}</span>
+          {% include "dashboard/partials/icon.html" with name="chevron-down" size=18 %}
+        </button>
+        <div class="menu-panel menu-panel--right" data-menu-panel hidden>
+          <div class="menu-header">
+            <p class="menu-name">{{ request.user.get_full_name|default:request.user.email }}</p>
+            <p class="menu-email">{{ request.user.email }}</p>
+          </div>
+          {% if request.user.is_staff %}
+          <a class="menu-item" href="{% url 'admin:index' %}">{% include "dashboard/partials/icon.html" with name="admin" size=18 %}Django admin</a>
+          {% endif %}
+          <form method="post" action="{% url 'accounts:logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="menu-item menu-item--danger">{% include "dashboard/partials/icon.html" with name="logout" size=18 %}Sign out</button>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <main id="main" class="page" tabindex="-1">
+      {% block page %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/app.js' %}" defer></script>{% endblock %}
