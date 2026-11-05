@@ -99,6 +99,7 @@ if AWS_STORAGE_BUCKET_NAME and AWS_S3_ENDPOINT_URL:
     MEDIA_URL = f"{AWS_S3_ENDPOINT_URL.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}/{AWS_LOCATION}/"
 
 if AWS_PRIVATE_BUCKET_NAME and AWS_S3_ENDPOINT_URL:
+    
     STORAGES["private"] = {
         "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
