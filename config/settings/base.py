@@ -124,13 +124,11 @@ IDENTITY_VERIFIER = env(
 IDENTITY_DOCUMENT_MAX_BYTES = 5 * 1024 * 1024
 
 
-# Email (EMAIL_BACKEND is set per environment)
+# Email (EMAIL_BACKEND is set per environment). Production sends through the
+# Resend API; see apps/accounts/email_backends.py.
 
-EMAIL_HOST = env("EMAIL_HOST", default="localhost")
-EMAIL_PORT = env.int("EMAIL_PORT", default=587)
-EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
-EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+RESEND_EMAIL_BACKEND = "apps.accounts.email_backends.ResendEmailBackend"
+RESEND_API_KEY = env("RESEND_API_KEY", default="")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="PHOGBS <no-reply@phogbs.com>")
 
 

@@ -3,3 +3,5 @@ djangorestframework==3.17
 django-environ==0.14
 psycopg[binary]==3.3.8
 Pillow==12
+whitenoise==6.11.0
+resend==2.51.0

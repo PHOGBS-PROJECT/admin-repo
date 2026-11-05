@@ -37,6 +37,36 @@ resets) are printed to the console instead of being sent.
 
 Run the tests with `python manage.py test apps`.
 
+## Deploying to Vercel
+
+Vercel runs `config/wsgi.py`, which uses production settings. There's no `.env`
+file there, so set these in **Project → Settings → Environment Variables**:
+
+| Variable | Value |
+|---|---|
+| `SECRET_KEY` | A long random string, e.g. from `python -c "import secrets; print(secrets.token_urlsafe(50))"` |
+| `DATABASE_URL` | A hosted PostgreSQL URL (Neon, Supabase, Vercel Postgres…). Vercel can't reach a database on your own computer, and SQLite doesn't persist there. |
+| `ALLOWED_HOSTS` | Only needed for a custom domain, e.g. `admin.phogbs.com`. The `*.vercel.app` domains are added automatically. |
+| `CSRF_TRUSTED_ORIGINS` | Only for a custom domain, e.g. `https://admin.phogbs.com`. |
+| `RESEND_API_KEY`, `DEFAULT_FROM_EMAIL` | Resend API key, and a From address on a domain verified in Resend, so invitation and password-reset emails send. |
+
+Redeploy after changing variables. Then set up the database once from your
+machine, pointing at the hosted database:
+
+```powershell
+$env:DJANGO_SETTINGS_MODULE="config.settings.prod"
+$env:SECRET_KEY="any-value"
+$env:ALLOWED_HOSTS="localhost"
+$env:DATABASE_URL="postgres://...your hosted database..."
+.\venv\Scripts\python manage.py migrate
+.\venv\Scripts\python manage.py createcachetable
+.\venv\Scripts\python manage.py createsuperuser
+```
+
+Static files are served by WhiteNoise. **Uploaded ID documents need an
+S3-compatible bucket before they will work on Vercel**, because its file
+system is read-only and wiped between requests.
+
 ## How accounts work
 
 Accounts are **invite-only**:

@@ -20,8 +20,9 @@ DATABASES = {
 
 DASHBOARD_SAMPLE_DATA = env.bool("DASHBOARD_SAMPLE_DATA", default=True)
 
-# Print emails (invitations, password resets) to the console.
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Print emails (invitations, password resets) to the console. To send real
+# email from dev, set EMAIL_BACKEND=apps.accounts.email_backends.ResendEmailBackend.
+EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 
 if sys.argv[1:2] == ["test"]:
     # Real hashers are deliberately slow; tests don't need that.

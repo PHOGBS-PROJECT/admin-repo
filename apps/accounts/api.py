@@ -5,6 +5,9 @@ uses session authentication for now; add token/JWT authentication when the
 mobile client is built.
 """
 
+import logging
+import smtplib
+
 from django.db import transaction
 from rest_framework import permissions, serializers, status
 from rest_framework.parsers import MultiPartParser
@@ -12,10 +15,13 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from .email_backends import EMAIL_ERRORS
 from .forms import InvitationForm, lookup_identity_name
 from .invitations import invite
 from .models import IdentityMethod, Invitation, User
 from .validators import validate_identity_document, validate_identity_number
+
+logger = logging.getLogger(__name__)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -123,7 +129,15 @@ class InvitationCreateView(APIView):
         form = InvitationForm(request.data)
         if not form.is_valid():
             return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
-        invitation = invite(
-            form.cleaned_data["email"], form.cleaned_data["role"], request.user, request
-        )
+        try:
+            invitation = invite(
+                form.cleaned_data["email"], form.cleaned_data["role"], request.user, request
+            )
+        except (smtplib.SMTPException, *EMAIL_ERRORS):
+            logger.exception("Could not send invitation email to %s", form.cleaned_data["email"])
+            return Response(
+                {"detail": "The invitation was created but the email could not be sent. "
+                           "Resend it from the admin."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
         return Response(InvitationSerializer(invitation).data, status=status.HTTP_201_CREATED)

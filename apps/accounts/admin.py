@@ -11,6 +11,7 @@ from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
 
+from .email_backends import EMAIL_ERRORS
 from .forms import clean_invitee_email
 from .invitations import invite, reissue
 from .models import Invitation, User
@@ -181,7 +182,7 @@ class InvitationAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         try:
             created = invite(obj.email, obj.role, request.user, request)
-        except (smtplib.SMTPException, OSError):
+        except (smtplib.SMTPException, *EMAIL_ERRORS):
             logger.exception("Could not send invitation email to %s", obj.email)
             messages.error(
                 request,
@@ -198,7 +199,7 @@ class InvitationAdmin(admin.ModelAdmin):
             try:
                 reissue(invitation, request)
                 sent += 1
-            except (smtplib.SMTPException, OSError):
+            except (smtplib.SMTPException, *EMAIL_ERRORS):
                 logger.exception("Could not resend invitation to %s", invitation.email)
         self.message_user(request, f"{sent} invitation(s) sent.")
 
