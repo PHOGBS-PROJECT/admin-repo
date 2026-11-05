@@ -6,6 +6,8 @@ automatically from Vercel's system environment variables.
 """
 
 from django.core.exceptions import ImproperlyConfigured
+from urllib.parse import urlparse
+
 
 from .base import *  # noqa: F403
 from .base import MIDDLEWARE, RESEND_EMAIL_BACKEND, env
@@ -66,27 +68,50 @@ SECURE_REFERRER_POLICY = "same-origin"
 
 # Compressed + hashed static files, served by WhiteNoise.
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+# --- File storage --------------------------------------------------------
 STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "private": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "OPTIONS": {"location": BASE_DIR / "private_media"},
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
 
-
 AWS_ACCESS_KEY_ID = os.getenv("SUPABASE_S3_ACCESS_KEY_ID") or os.getenv("S3_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("SUPABASE_S3_SECRET_ACCESS_KEY") or os.getenv("S3_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = os.getenv("SUPABASE_S3_MEDIA_BUCKET") or os.getenv("S3_BUCKET_NAME")
+AWS_PRIVATE_BUCKET_NAME = os.getenv("SUPABASE_S3_PRIVATE_BUCKET")
 AWS_S3_ENDPOINT_URL = os.getenv("SUPABASE_S3_ENDPOINT_URL") or os.getenv("S3_ENDPOINT_URL")
 AWS_S3_REGION_NAME = os.getenv("SUPABASE_S3_REGION_NAME") or os.getenv("S3_REGION", "auto")
 AWS_S3_ADDRESSING_STYLE = "path"
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = None
-AWS_QUERYSTRING_AUTH = False
 AWS_LOCATION = "media"
 
 if AWS_STORAGE_BUCKET_NAME and AWS_S3_ENDPOINT_URL:
-    INSTALLED_APPS += ["storages"]
     STORAGES["default"] = {
         "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {"querystring_auth": False},
     }
     MEDIA_URL = f"{AWS_S3_ENDPOINT_URL.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}/{AWS_LOCATION}/"
+
+if AWS_PRIVATE_BUCKET_NAME and AWS_S3_ENDPOINT_URL:
+    STORAGES["private"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": AWS_PRIVATE_BUCKET_NAME,
+            "location": "",
+            "querystring_auth": True,   # signed links for ID documents
+            "querystring_expire": 300,  # valid for 5 minutes
+        },
+    }
+    
+
+if AWS_S3_ENDPOINT_URL:
+    SUPABASE_PROJECT_REF = urlparse(AWS_S3_ENDPOINT_URL).hostname.split(".")[0]
+    AWS_S3_CUSTOM_DOMAIN = (
+        f"{SUPABASE_PROJECT_REF}.supabase.co/storage/v1/object/public/{AWS_STORAGE_BUCKET_NAME}"
+    )
