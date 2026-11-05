@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "storages",
     "apps.accounts",
     "apps.dashboard",
 ]
@@ -173,7 +174,8 @@ MEDIA_ROOT = env("MEDIA_ROOT", default=str(BASE_DIR / "media"))
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
-    # Swap for an S3-compatible backend with private ACLs in production.
+    # "default" and "private" are replaced with Supabase S3 buckets in
+    # config/settings/prod.py; see that file for the storage.
     "private": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
         "OPTIONS": {"location": str(Path(MEDIA_ROOT) / "private"), "base_url": None},

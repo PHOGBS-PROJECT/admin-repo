@@ -5,3 +5,4 @@ psycopg[binary]==3.3.8
 Pillow==12
 whitenoise==6.11.0
 resend==2.51.0
+django-storages[s3]==1.14.6
