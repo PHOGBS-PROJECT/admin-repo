@@ -4,11 +4,14 @@ from django import forms
 from django.contrib.auth import authenticate, password_validation
 from django.contrib.auth.forms import PasswordResetForm
 from django.core.exceptions import ValidationError
+from django.core.mail import EmailMultiAlternatives
 from django.db import DatabaseError
+from django.template.loader import render_to_string
 
 from . import throttle
 from .identity import IdentityProviderError, get_identity_verifier
-from .models import IdentityMethod, Role, User
+from .models import IdentityMethod, Role, User, UserManager
+from .tasks import queue_email
 from .validators import (
     IDENTITY_DOCUMENT_ACCEPT,
     PASSWORD_RULE_ERROR_CODE,
@@ -95,6 +98,26 @@ class ForgotPasswordForm(PasswordResetForm):
             attrs={"placeholder": "Enter email address", "autocomplete": "email", "autofocus": True}
         ),
     )
+
+    def get_users(self, email):
+        # Exact match on the stored lowercase address uses the unique index
+        # (Django's default uses iexact, which scans the table).
+        users = User.objects.filter(email=UserManager.normalize_email(email), is_active=True)
+        return (user for user in users if user.has_usable_password())
+
+    def send_mail(self, subject_template_name, email_template_name, context, from_email,
+                  to_email, html_email_template_name=None):
+        subject = "".join(render_to_string(subject_template_name, context).splitlines())
+        body = render_to_string(email_template_name, context)
+        message = EmailMultiAlternatives(subject, body, from_email, [to_email])
+        if html_email_template_name:
+            message.attach_alternative(render_to_string(html_email_template_name, context), "text/html")
+        try:
+            queue_email(message)
+        except Exception:
+            # As in Django: the response must look the same whether or not the
+            # address has an account, so failures are only logged.
+            logger.exception("Failed to send password reset email to user %s", context["user"].pk)
 
 
 class NewPasswordForm(forms.Form):
@@ -256,7 +279,7 @@ def lookup_identity_name(method, number):
 
 def clean_invitee_email(email):
     email = email.strip().lower()
-    if User.objects.filter(email__iexact=email).exists():
+    if User.objects.filter(email=email).exists():
         raise ValidationError("A user with this email address already exists.")
     return email
 

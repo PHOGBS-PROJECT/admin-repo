@@ -6,7 +6,8 @@ navigation, top bar with breadcrumb, search, notifications and account menu.
 Pages fill {% block page %} and may set {% block breadcrumb %}.
 {% endcomment %}
 
-{% block styles %}<link rel="stylesheet" href="{% static 'css/app.css' %}">{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{% static 'css/app.css' %}">
+<link rel="stylesheet" href="{% static 'css/people.css' %}">{% endblock %}
 {% block body_class %}app-page{% endblock %}
 
 {% block body %}
@@ -31,35 +32,38 @@ Pages fill {% block page %} and may set {% block breadcrumb %}.
     </button>
 
     <nav class="sidebar-nav">
+      {% comment %}Items are hidden when the user's role has no access (apps/accounts/permissions.py).{% endcomment %}
       <p class="nav-heading">Workspace</p>
       <ul>
         {% url 'dashboard:home' as home_url %}
         {% include "dashboard/partials/nav_link.html" with url=home_url icon="overview" label="Overview" %}
       </ul>
 
-      <p class="nav-heading">Roles &amp; Permissions</p>
+      {% if levels.staff_all != "none" or levels.staff_invitations != "none" or levels.staff_roles != "none" or levels.staff_organisations != "none" %}
+      <p class="nav-heading">People &amp; Access</p>
       <ul>
         <li>
-          <details class="nav-group">
-            <summary class="nav-link">
-              {% include "dashboard/partials/icon.html" with name="staff" %}<span class="nav-label">Staff Directory</span>
+          <details class="nav-group"{% if section == "people" %} open{% endif %}>
+            <summary class="nav-link{% if section == "people" %} is-current-group{% endif %}">
+              {% include "dashboard/partials/icon.html" with name="hash" %}<span class="nav-label">Staff Directory</span>
               <span class="nav-badge" title="{{ staff_count }} active staff">{{ staff_count }}</span>
               <span class="nav-chevron">{% include "dashboard/partials/icon.html" with name="chevron-down" size=18 %}</span>
             </summary>
             <ul>
-              {% url 'admin:accounts_user_changelist' as users_url %}
-              {% url 'admin:accounts_invitation_changelist' as invites_url %}
-              {% url 'admin:auth_group_changelist' as groups_url %}
-              {% include "dashboard/partials/nav_link.html" with url=users_url label="All staff" sub=True %}
-              {% include "dashboard/partials/nav_link.html" with url=invites_url label="Invitations" sub=True %}
-              {% include "dashboard/partials/nav_link.html" with url=groups_url label="Roles & permissions" sub=True %}
+              {% if levels.staff_all != "none" %}{% url 'people:directory' as u %}{% include "dashboard/partials/nav_link.html" with url=u label="All Staff" sub=True key="all_staff" %}{% endif %}
+              {% if levels.staff_invitations != "none" %}{% url 'people:invitations' as u %}{% include "dashboard/partials/nav_link.html" with url=u label="Invitations" sub=True %}{% endif %}
+              {% if levels.staff_roles != "none" %}{% url 'people:roles' as u %}{% include "dashboard/partials/nav_link.html" with url=u label="Roles & Permissions" sub=True %}{% endif %}
+              {% if levels.staff_organisations != "none" and request.user.is_staff %}{% url 'admin:accounts_organisation_changelist' as u %}{% include "dashboard/partials/nav_link.html" with url=u label="Organisations" sub=True %}{% endif %}
             </ul>
           </details>
         </li>
       </ul>
+      {% endif %}
 
+      {% if levels.programmes != "none" or levels.enrolments != "none" or levels.course_delivery != "none" or levels.assessments != "none" or levels.results != "none" or levels.certificates != "none" or levels.events != "none" %}
       <p class="nav-heading">Academic Management</p>
       <ul>
+        {% if levels.programmes != "none" %}
         <li>
           <details class="nav-group"{% if section == "programmes" or section == "courses" %} open{% endif %}>
             <summary class="nav-link">
@@ -72,30 +76,38 @@ Pages fill {% block page %} and may set {% block breadcrumb %}.
             </ul>
           </details>
         </li>
-        {% url 'dashboard:coming_soon' 'enrolments' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="enrol" label="Enrolments" %}
-        {% url 'dashboard:coming_soon' 'course-delivery' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="delivery" label="Course Delivery" %}
-        {% url 'dashboard:coming_soon' 'assessments' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="assessment" label="Assessments" %}
-        {% url 'dashboard:coming_soon' 'results' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="results" label="Results" %}
-        {% url 'dashboard:coming_soon' 'certificates' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="certificate" label="Certificates" %}
-        {% url 'dashboard:coming_soon' 'events' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="events" label="Events" %}
+        {% endif %}
+        {% if levels.enrolments != "none" %}{% url 'dashboard:coming_soon' 'enrolments' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="enrol" label="Enrolments" %}{% endif %}
+        {% if levels.course_delivery != "none" %}{% url 'dashboard:coming_soon' 'course-delivery' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="delivery" label="Course Delivery" %}{% endif %}
+        {% if levels.assessments != "none" %}{% url 'dashboard:coming_soon' 'assessments' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="assessment" label="Assessments" %}{% endif %}
+        {% if levels.results != "none" %}{% url 'dashboard:coming_soon' 'results' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="results" label="Results" %}{% endif %}
+        {% if levels.certificates != "none" %}{% url 'dashboard:coming_soon' 'certificates' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="certificate" label="Certificates" %}{% endif %}
+        {% if levels.events != "none" %}{% url 'dashboard:coming_soon' 'events' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="events" label="Events" %}{% endif %}
       </ul>
+      {% endif %}
 
+      {% if levels.transactions != "none" or levels.financial_reports != "none" %}
       <p class="nav-heading">Finance</p>
       <ul>
-        {% url 'dashboard:coming_soon' 'transactions' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="transactions" label="Transactions" %}
-        {% url 'dashboard:coming_soon' 'financial-reports' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="report" label="Financial Reports" %}
+        {% if levels.transactions != "none" %}{% url 'dashboard:coming_soon' 'transactions' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="transactions" label="Transactions" %}{% endif %}
+        {% if levels.financial_reports != "none" %}{% url 'dashboard:coming_soon' 'financial-reports' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="report" label="Financial Reports" %}{% endif %}
       </ul>
+      {% endif %}
 
+      {% if levels.website_content != "none" or levels.learning_resources != "none" %}
       <p class="nav-heading">Content Management</p>
       <ul>
-        {% url 'dashboard:coming_soon' 'website-content' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="website" label="Website Content" %}
-        {% url 'dashboard:coming_soon' 'learning-resources' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="resource" label="Learning Resource" %}
+        {% if levels.website_content != "none" %}{% url 'dashboard:coming_soon' 'website-content' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="website" label="Website Content" %}{% endif %}
+        {% if levels.learning_resources != "none" %}{% url 'dashboard:coming_soon' 'learning-resources' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="resource" label="Learning Resource" %}{% endif %}
       </ul>
+      {% endif %}
 
+      {% if request.user.is_admin %}
       <p class="nav-heading">Insights</p>
       <ul>
         {% url 'dashboard:coming_soon' 'reports' as u %}{% include "dashboard/partials/nav_link.html" with url=u icon="insights" label="Reports" %}
       </ul>
+      {% endif %}
     </nav>
 
     <div class="sidebar-foot">
@@ -178,10 +190,21 @@ Pages fill {% block page %} and may set {% block breadcrumb %}.
     </header>
 
     <main id="main" class="page" tabindex="-1">
+      {% if messages %}
+      <div class="flash-list" data-flash>
+        {% for message in messages %}
+        <p class="flash flash--{{ message.level_tag|default:'info' }}" role="{% if message.level_tag == 'error' %}alert{% else %}status{% endif %}">
+          <span>{{ message }}</span>
+          <button type="button" class="flash-close" data-flash-close aria-label="Dismiss">{% include "dashboard/partials/icon.html" with name="close" size=16 %}</button>
+        </p>
+        {% endfor %}
+      </div>
+      {% endif %}
       {% block page %}{% endblock %}
     </main>
   </div>
 </div>
 {% endblock %}
 
-{% block scripts %}<script src="{% static 'js/app.js' %}" defer></script>{% endblock %}
+{% block scripts %}<script src="{% static 'js/app.js' %}" defer></script>
+<script src="{% static 'js/people.js' %}" defer></script>{% endblock %}

@@ -1,0 +1,60 @@
+{% comment %}
+Cascading filter menu from the designs. Must sit inside the page's GET form.
+Pass groups: "all" (roles, organisations, last active, status) or "invites"
+(roles and organisations only).
+{% endcomment %}
+<div class="menu filter-menu" data-menu data-filter-menu>
+  <button type="button" class="button-outline{% if filters.count %} is-active{% endif %}" data-menu-button aria-expanded="false" aria-haspopup="true">
+    {% include "dashboard/partials/icon.html" with name="filter" size=18 %}Filter{% if filters.count %}<span class="filter-count">{{ filters.count }}</span>{% endif %}
+  </button>
+  <div class="menu-panel menu-panel--right filter-panel" data-menu-panel hidden>
+    <div class="filter-categories" role="tablist" aria-label="Filter by">
+      <button type="button" class="filter-category is-selected" role="tab" aria-selected="true" aria-controls="filter-roles" data-filter-category>Roles{% include "dashboard/partials/icon.html" with name="chevron-right" size=18 %}</button>
+      <button type="button" class="filter-category" role="tab" aria-selected="false" aria-controls="filter-orgs" data-filter-category>Organisations{% include "dashboard/partials/icon.html" with name="chevron-right" size=18 %}</button>
+      {% if groups == "all" %}
+      <button type="button" class="filter-category" role="tab" aria-selected="false" aria-controls="filter-active" data-filter-category>Last Active{% include "dashboard/partials/icon.html" with name="chevron-right" size=18 %}</button>
+      <button type="button" class="filter-category" role="tab" aria-selected="false" aria-controls="filter-status" data-filter-category>Status{% include "dashboard/partials/icon.html" with name="chevron-right" size=18 %}</button>
+      {% endif %}
+    </div>
+
+    <fieldset class="filter-options" id="filter-roles" role="tabpanel" data-filter-group>
+      <legend class="visually-hidden">Roles</legend>
+      <label class="check-option"><input type="checkbox" class="checkbox-input" data-filter-all{% if not filters.roles %} checked{% endif %}> All roles</label>
+      {% for value, label in filter_roles %}
+      <label class="check-option"><input type="checkbox" class="checkbox-input" name="role" value="{{ value }}"{% if value in filters.roles %} checked{% endif %}> {{ label }}</label>
+      {% endfor %}
+    </fieldset>
+
+    <fieldset class="filter-options" id="filter-orgs" role="tabpanel" data-filter-group hidden>
+      <legend class="visually-hidden">Organisations</legend>
+      <label class="check-option"><input type="checkbox" class="checkbox-input" data-filter-all{% if not filters.organisations %} checked{% endif %}> All organisations</label>
+      {% for organisation in organisations %}
+      {% with value=organisation.pk|stringformat:"s" %}
+      <label class="check-option"><input type="checkbox" class="checkbox-input" name="org" value="{{ value }}"{% if value in filters.organisations %} checked{% endif %}> {{ organisation.name }}</label>
+      {% endwith %}
+      {% endfor %}
+    </fieldset>
+
+    {% if groups == "all" %}
+    <fieldset class="filter-options" id="filter-active" role="tabpanel" data-filter-group hidden>
+      <legend class="visually-hidden">Last active</legend>
+      <label class="check-option"><input type="checkbox" class="checkbox-input" data-filter-all{% if not filters.last_active %} checked{% endif %}> Any time</label>
+      {% for value, label in last_active_choices %}
+      <label class="check-option"><input type="checkbox" class="checkbox-input" name="active" value="{{ value }}"{% if value in filters.last_active %} checked{% endif %}> {{ label }}</label>
+      {% endfor %}
+    </fieldset>
+
+    <fieldset class="filter-options" id="filter-status" role="tabpanel" data-filter-group hidden>
+      <legend class="visually-hidden">Status</legend>
+      <label class="check-option"><input type="checkbox" class="checkbox-input" data-filter-all{% if not filters.statuses %} checked{% endif %}> All status</label>
+      {% for value, label in status_choices %}
+      <label class="check-option"><input type="checkbox" class="checkbox-input" name="status" value="{{ value }}"{% if value in filters.statuses %} checked{% endif %}> {{ label }}</label>
+      {% endfor %}
+    </fieldset>
+    {% endif %}
+
+    <div class="filter-footer" data-filter-footer>
+      <button type="submit" class="button-primary button-primary--small">Apply filters</button>
+    </div>
+  </div>
+</div>

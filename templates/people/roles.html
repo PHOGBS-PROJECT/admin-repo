@@ -1,0 +1,60 @@
+{% extends "dashboard/app.html" %}
+{% comment %}Roles & Permissions, from design/Staff directory(roles & permissions)/.{% endcomment %}
+
+{% block title %}Roles & Permissions{% endblock %}
+{% block breadcrumb %}<li><span>People &amp; Access</span></li><li><a href="{% url 'people:directory' %}">Staff Directory</a></li><li><span aria-current="page">Roles &amp; Permissions</span></li>{% endblock %}
+
+{% block page %}
+<header class="page-header">
+  <div>
+    <h1 class="page-title">Roles &amp; Permissions</h1>
+    <p class="page-lede">Manage staff roles and the permissions associated with each role.</p>
+  </div>
+</header>
+
+<nav class="segment-tabs segment-tabs--wide" aria-label="Roles">
+  {% for value, label, short in role_tabs %}
+  <a class="segment-tab{% if value == role %} is-selected{% endif %}" href="?role={{ value }}"{% if value == role %} aria-current="page"{% endif %} title="{{ label }}">{{ short }}</a>
+  {% endfor %}
+</nav>
+
+<form method="post" class="panel permission-panel" data-permission-form>
+  {% csrf_token %}
+  <input type="hidden" name="role" value="{{ role }}">
+  <div class="panel-title panel-title--stacked">
+    <h2 class="panel-heading">{{ role_label }}</h2>
+    <p class="panel-sub">{{ role_summary }}</p>
+  </div>
+  <div class="panel-body permission-body">
+    {% if locked %}
+    <p class="permission-note">{% include "dashboard/partials/icon.html" with name="info" size=18 %}School administrators always have full access, so their permissions can't be changed.</p>
+    {% elif not can_edit %}
+    <p class="permission-note">{% include "dashboard/partials/icon.html" with name="info" size=18 %}You can view these permissions but not change them.</p>
+    {% endif %}
+    {% for heading, modules in groups %}
+    <h3 class="permission-group">{{ heading }}</h3>
+    {% for module, label, current in modules %}
+    <fieldset class="permission-row">
+      <legend class="permission-label">{{ label }}</legend>
+      <div class="segmented{% if locked %} segmented--locked{% endif %}">
+        {% for value, choice in level_choices %}
+        {% if not locked or value != "none" %}
+        <label class="segmented-option">
+          <input type="radio" name="level_{{ module }}" value="{{ value }}"{% if value == current %} checked{% endif %}{% if not can_edit %} disabled{% endif %}>
+          <span>{{ choice }}</span>
+        </label>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </fieldset>
+    {% endfor %}
+    {% endfor %}
+  </div>
+  {% if can_edit %}
+  <div class="save-bar" data-save-bar>
+    <p class="save-bar-text" data-save-status>Changes apply to everyone with this role.</p>
+    <button type="submit" class="button-primary">Save changes</button>
+  </div>
+  {% endif %}
+</form>
+{% endblock %}

@@ -21,8 +21,8 @@ class Role(models.TextChoices):
     FACULTY = "faculty", "Faculty / Instructor"
     FINANCE_ADMIN = "finance_admin", "Finance Administrator"
     CONTENT_ADMIN = "content_admin", "Content Administrator"
-    EXAM_OFFICER = "exam_officer", "Examination Officer"
-    CORPORATE_ADMIN = "corporate_admin", "Corporate Training Manager"
+    EXAM_OFFICER = "exam_officer", "Exam Officer"
+    CORPORATE_ADMIN = "corporate_admin", "Corporate Manager"
     LEARNER = "learner", "Learner"
     ALUMNI = "alumni", "Alumni"
 
@@ -31,6 +31,36 @@ class Role(models.TextChoices):
 ADMIN_ROLES = {Role.SUPER_ADMIN, Role.SCHOOL_ADMIN}
 
 STAFF_ROLES = [r for r in Role if r not in (Role.LEARNER, Role.ALUMNI)]
+
+# Roles that can be given to staff from the Staff Directory, in the order the
+# designs list them, with the descriptions shown when assigning a role.
+# Super administrators are only created by an existing superuser (Django
+# admin or createsuperuser).
+ASSIGNABLE_ROLES = {
+    Role.FACULTY: "Manage assigned courses, learning activities and learner assessments.",
+    Role.PROGRAMME_MANAGER: "Manage assigned programmes, enrolments and programme delivery.",
+    Role.ACADEMIC_ADMIN: "Manage academic records, learner administration and academic operations.",
+    Role.EXAM_OFFICER: "Manage assessments, examination records and results.",
+    Role.FINANCE_ADMIN: "Manage financial records, payments and transactions.",
+    Role.CONTENT_ADMIN: "Manage website content and learning resources.",
+    Role.CORPORATE_ADMIN: "Manage permitted training activities and associated organisational learners.",
+    Role.SCHOOL_ADMIN: "Full administrative access across the PHOGBS platform.",
+}
+
+# Labels for the coloured role pills in tables.
+ROLE_SHORT_LABELS = {
+    Role.SUPER_ADMIN: "Super Admin",
+    Role.SCHOOL_ADMIN: "School Admin",
+    Role.ACADEMIC_ADMIN: "Academic Admin",
+    Role.PROGRAMME_MANAGER: "Programme Manager",
+    Role.FACULTY: "Instructor",
+    Role.FINANCE_ADMIN: "Finance Admin",
+    Role.CONTENT_ADMIN: "Content Admin",
+    Role.EXAM_OFFICER: "Exam Officer",
+    Role.CORPORATE_ADMIN: "Corporate Manager",
+    Role.LEARNER: "Learner",
+    Role.ALUMNI: "Alumni",
+}
 
 
 # Shown on the invitation screen: "You will be able to access the <area>
@@ -53,6 +83,43 @@ ROLE_FEATURE_AREAS = {
 class IdentityMethod(models.TextChoices):
     NIN = "nin", "National Identification Number (NIN)"
     BVN = "bvn", "Bank Verification Number (BVN)"
+
+
+class ResubmissionReason(models.TextChoices):
+    UNREADABLE = "unreadable", "Document is unclear or unreadable"
+    INCORRECT = "incorrect", "Information provided is not correct"
+    MISSING = "missing", "Required information is missing"
+    EXPIRED = "expired", "Document has expired"
+    OTHER = "other", "Other"
+
+
+class Organisation(models.Model):
+    """PHOGBS itself or a corporate client whose staff use the platform."""
+
+    class Kind(models.TextChoices):
+        SCHOOL = "school", "Port-Harcourt Oil & Gas Business School"
+        CORPORATE = "corporate", "Corporate Organisation"
+
+    name = models.CharField(max_length=200, unique=True)
+    kind = models.CharField(max_length=16, choices=Kind.choices, default=Kind.CORPORATE)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    @classmethod
+    def ordered(cls):
+        """PHOGBS first, then corporate organisations alphabetically."""
+        return cls.objects.order_by(
+            models.Case(models.When(kind=cls.Kind.SCHOOL, then=0), default=1), "name"
+        )
+
+    @classmethod
+    def school(cls):
+        return cls.objects.filter(kind=cls.Kind.SCHOOL).order_by("pk").first()
 
 
 def private_storage():
@@ -91,7 +158,9 @@ class UserManager(BaseUserManager):
         return self._create_user(email, password, **extra_fields)
 
     def get_by_natural_key(self, email):
-        return self.get(email__iexact=email)
+        # Emails are stored lowercase (see save()), so an exact match on the
+        # normalised address uses the unique index; iexact can't.
+        return self.get(email=self.normalize_email(email))
 
     @classmethod
     def normalize_email(cls, email):
@@ -104,10 +173,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     last_name = models.CharField(max_length=150, blank=True)
     phone = models.CharField(max_length=20, blank=True)
     role = models.CharField(max_length=32, choices=Role.choices, default=Role.LEARNER)
+    organisation = models.ForeignKey(
+        Organisation, on_delete=models.PROTECT, null=True, blank=True, related_name="members"
+    )
 
     is_active = models.BooleanField(
         default=True,
-        help_text="Unticking this deactivates the account; the user can no longer sign in.",
+        help_text="Unticking this suspends the account; the user is signed out and can't sign in.",
     )
     is_staff = models.BooleanField(
         default=False, help_text="Allows access to the Django admin site."
@@ -125,6 +197,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     identity_document_name = models.CharField(max_length=255, blank=True)
     profile_completed_at = models.DateTimeField(null=True, blank=True)
 
+    # Set when an administrator asks for a new identity document; cleared
+    # when the user submits one.
+    resubmission_reason = models.CharField(
+        max_length=16, choices=ResubmissionReason.choices, blank=True
+    )
+    resubmission_note = models.TextField(blank=True)
+    resubmission_requested_at = models.DateTimeField(null=True, blank=True)
+
     objects = UserManager()
 
     EMAIL_FIELD = "email"
@@ -133,6 +213,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         ordering = ["email"]
+        indexes = [models.Index(fields=["role", "is_active"], name="user_role_active_idx")]
 
     def __str__(self):
         return self.email
@@ -154,6 +235,24 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def needs_onboarding(self):
         return self.profile_completed_at is None
+
+    @property
+    def needs_identity_resubmission(self):
+        return self.resubmission_requested_at is not None
+
+    @property
+    def can_edit_identity(self):
+        return self.needs_onboarding or self.needs_identity_resubmission
+
+    @property
+    def role_short_label(self):
+        return ROLE_SHORT_LABELS.get(self.role, self.get_role_display())
+
+    @property
+    def initials(self):
+        if self.first_name or self.last_name:
+            return f"{self.first_name[:1]}{self.last_name[:1]}".upper()
+        return self.email[:1].upper()
 
     @property
     def has_basic_profile(self):
@@ -192,6 +291,9 @@ class Invitation(models.Model):
 
     email = models.EmailField()
     role = models.CharField(max_length=32, choices=Role.choices)
+    organisation = models.ForeignKey(
+        Organisation, on_delete=models.PROTECT, null=True, blank=True, related_name="invitations"
+    )
     invited_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -217,6 +319,11 @@ class Invitation(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["email"], name="invitation_email_idx"),
+            models.Index(fields=["accepted_at", "revoked_at", "expires_at"],
+                         name="invitation_status_idx"),
+        ]
 
     def __str__(self):
         return f"{self.email} ({self.get_role_display()})"
@@ -249,9 +356,41 @@ class Invitation(models.Model):
         return "pending"
 
     @property
+    def status_label(self):
+        return self.status.capitalize()
+
+    @property
     def is_usable(self):
         return self.status == "pending"
 
     @property
     def role_feature_area(self):
         return ROLE_FEATURE_AREAS.get(self.role, "platform")
+
+    @property
+    def role_short_label(self):
+        return ROLE_SHORT_LABELS.get(self.role, self.get_role_display())
+
+
+class RolePermission(models.Model):
+    """An administrator's override of a role's default access to a module.
+
+    Defaults live in apps/accounts/permissions.py; a row here replaces the
+    default for one (role, module) pair.
+    """
+
+    role = models.CharField(max_length=32, choices=Role.choices)
+    module = models.CharField(max_length=40)
+    level = models.CharField(max_length=8)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["role", "module"], name="unique_role_module_permission")
+        ]
+
+    def __str__(self):
+        return f"{self.role}: {self.module} = {self.level}"

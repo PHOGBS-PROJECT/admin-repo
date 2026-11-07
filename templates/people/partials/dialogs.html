@@ -1,0 +1,123 @@
+{% load static %}{% comment %}
+Overlays for the Staff Directory pages, from design/Overlay - *.png. Opened by
+buttons with data-dialog-open="<id>"; app.js copies the opener's data-action,
+data-value, data-ids etc. into the dialog. Pass next (return URL).
+{% endcomment %}
+
+{% if can_manage_invitations %}
+<dialog class="modal" id="add-staff-dialog" aria-labelledby="add-staff-title"{% if open_add_staff %} data-open-on-load{% endif %}>
+  <button type="button" class="modal-close" data-dialog-close aria-label="Close">{% include "dashboard/partials/icon.html" with name="close" %}</button>
+  <h2 class="modal-title" id="add-staff-title">Add Staff</h2>
+  <form method="post" action="{% url 'people:add_staff' %}" class="modal-form" novalidate data-add-staff-form>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    {% if add_form.non_field_errors %}<p class="form-error" role="alert">{{ add_form.non_field_errors|join:" " }}</p>{% endif %}
+    <div class="form-field">
+      <label class="form-label" for="{{ add_form.email.id_for_label }}">{{ add_form.email.label }}</label>
+      {{ add_form.email }}
+      {% for error in add_form.email.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+    </div>
+    <div class="form-field">
+      <label class="form-label" for="{{ add_form.role.id_for_label }}">{{ add_form.role.label }}</label>
+      <div class="select-wrap">{{ add_form.role }}</div>
+      {% for error in add_form.role.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+    </div>
+    <div class="form-field" data-organisation-field>
+      <label class="form-label" for="{{ add_form.organisation.id_for_label }}">{{ add_form.organisation.label }}</label>
+      <div class="select-wrap">{{ add_form.organisation }}</div>
+      <p class="form-help">{{ add_form.organisation.help_text }}</p>
+      {% for error in add_form.organisation.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+    </div>
+    <button type="submit" class="button-primary button-primary--block" data-require-filled>Send Invite</button>
+  </form>
+</dialog>
+{% endif %}
+
+{% if can_manage_staff %}
+<dialog class="modal modal--compact" id="suspend-dialog" aria-labelledby="suspend-title" data-suspend-dialog>
+  <span class="modal-icon modal-icon--danger" aria-hidden="true">{% include "dashboard/partials/icon.html" with name="alert" size=28 %}</span>
+  <h2 class="modal-title modal-title--left" id="suspend-title">Suspend User(s)</h2>
+  <p class="modal-text">They will be signed out and lose all permission access.</p>
+  <form method="post" action="{% url 'people:suspend' %}" class="modal-actions modal-actions--end">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <span data-suspend-ids></span>
+    <button type="button" class="button-outline" data-dialog-close>Cancel</button>
+    <button type="submit" class="button-danger">Suspend</button>
+  </form>
+</dialog>
+
+<dialog class="modal" id="role-dialog" aria-labelledby="role-title" data-choice-dialog>
+  <button type="button" class="modal-close" data-dialog-close aria-label="Close">{% include "dashboard/partials/icon.html" with name="close" %}</button>
+  <span class="modal-icon modal-icon--warning" aria-hidden="true">{% include "dashboard/partials/icon.html" with name="alert" size=28 %}</span>
+  <h2 class="modal-title" id="role-title">Edit Role Permissions</h2>
+  <p class="modal-text modal-text--center">Assigning a role changes the user's access permissions. Only assign roles that are appropriate for the user's responsibilities.</p>
+  <form method="post" action="" class="modal-form" data-dialog-form>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <fieldset class="choice-list">
+      <legend class="form-label">Available roles</legend>
+      {% for value, label, description in assignable_roles %}
+      <label class="choice"><input type="radio" class="radio-input" name="role" value="{{ value }}" required><span><span class="choice-label">{{ label }}</span><span class="choice-help">{{ description }}</span></span></label>
+      {% endfor %}
+    </fieldset>
+    <div class="modal-actions">
+      <button type="button" class="button-outline button-outline--block" data-dialog-close>Cancel</button>
+      <button type="submit" class="button-primary button-primary--block">Save Changes</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="modal" id="organisation-dialog" aria-labelledby="organisation-title" data-choice-dialog>
+  <button type="button" class="modal-close" data-dialog-close aria-label="Close">{% include "dashboard/partials/icon.html" with name="close" %}</button>
+  <span class="modal-icon modal-icon--warning" aria-hidden="true">{% include "dashboard/partials/icon.html" with name="alert" size=28 %}</span>
+  <h2 class="modal-title" id="organisation-title">Change Organisation</h2>
+  <p class="modal-text modal-text--center">Update the organisation associated with this user. This may affect access to organisation-related records.</p>
+  <form method="post" action="" class="modal-form" data-dialog-form>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <fieldset class="choice-list">
+      <legend class="form-label">Available organisation</legend>
+      {% for organisation in organisations %}
+      <label class="choice"><input type="radio" class="radio-input" name="organisation" value="{{ organisation.pk }}" required><span><span class="choice-label">{{ organisation.name }}</span><span class="choice-help">{{ organisation.get_kind_display }}</span></span></label>
+      {% endfor %}
+    </fieldset>
+    <div class="modal-actions">
+      <button type="button" class="button-outline button-outline--block" data-dialog-close>Cancel</button>
+      <button type="submit" class="button-primary button-primary--block">Save Changes</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog class="modal" id="resubmission-dialog" aria-labelledby="resubmission-title" data-choice-dialog>
+  <button type="button" class="modal-close" data-dialog-close aria-label="Close">{% include "dashboard/partials/icon.html" with name="close" %}</button>
+  <h2 class="modal-title" id="resubmission-title">Identification Resubmission Request</h2>
+  <form method="post" action="" class="modal-form" data-dialog-form>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="person-card">
+      <p class="person-card-name" data-fill="name"></p>
+      <p class="person-card-email" data-fill="email"></p>
+    </div>
+    <fieldset class="choice-list choice-list--compact">
+      <legend class="form-label">Reason for Resubmission</legend>
+      {% for value, label in resubmission_reasons %}
+      <label class="choice"><input type="radio" class="radio-input" name="reason" value="{{ value }}" required><span class="choice-label">{{ label }}</span></label>
+      {% endfor %}
+    </fieldset>
+    <div class="form-field">
+      <label class="form-label" for="resubmission-note">Additional Instructions</label>
+      <textarea id="resubmission-note" name="note" rows="4" maxlength="1000" placeholder="Be specific so the user knows exactly what to do."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="button-outline button-outline--block" data-dialog-close>Cancel</button>
+      <button type="submit" class="button-primary button-primary--block">Send Request</button>
+    </div>
+  </form>
+</dialog>
+{% endif %}
+
+<dialog class="modal modal--viewer" id="document-dialog" aria-label="Identity document" data-document-dialog>
+  <button type="button" class="modal-close" data-dialog-close aria-label="Close">{% include "dashboard/partials/icon.html" with name="close" %}</button>
+  <div class="document-frame" data-document-frame></div>
+</dialog>

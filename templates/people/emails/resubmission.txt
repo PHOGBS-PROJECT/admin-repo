@@ -1,0 +1,12 @@
+Hello{% if user.first_name %} {{ user.first_name }}{% endif %},
+
+A PHOGBS administrator has asked you to submit your identity document again.
+
+Reason: {{ reason }}
+{% if note %}
+{{ note }}
+{% endif %}
+Sign in to upload a new document:
+{{ url }}
+
+PHOGBS

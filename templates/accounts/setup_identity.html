@@ -3,14 +3,20 @@
 
 {% block title %}Verify your identity{% endblock %}
 {% block icon %}{% include "accounts/partials/icon_badge.html" with icon="user" %}{% endblock %}
-{% block heading %}Let's get to know you{% endblock %}
-{% block subheading %}Complete your profile to get started with PHOGBS.{% endblock %}
+{% block heading %}{% if resubmission %}Resubmit your identification{% else %}Let's get to know you{% endif %}{% endblock %}
+{% block subheading %}{% if resubmission %}An administrator has asked you to submit your identity document again.{% else %}Complete your profile to get started with PHOGBS.{% endif %}{% endblock %}
 
 {% block content %}
 <form method="post" enctype="multipart/form-data" class="auth-form" novalidate data-auth-form data-identity-form
       data-lookup-url="{% url 'accounts_api:identity_lookup' %}">
   {% csrf_token %}
   {% include "accounts/partials/status.html" %}
+  {% if resubmission %}
+  <div class="resubmission-note" role="note">
+    <p class="resubmission-reason">{{ resubmission.reason }}</p>
+    {% if resubmission.note %}<p>{{ resubmission.note|linebreaksbr }}</p>{% endif %}
+  </div>
+  {% endif %}
 
   <fieldset class="field">
     <legend class="field-label">{{ form.identity_method.label }}</legend>
@@ -35,6 +41,7 @@
     <span class="field-label" id="document-label">{{ form.identity_document.label }}</span>
     <div class="upload{% if request.user.identity_document %} upload--done{% endif %}" data-upload
          data-upload-url="{% url 'accounts_api:identity_document' %}"
+         {% if direct_uploads %}data-presign-url="{% url 'accounts_api:identity_upload_url' %}" data-confirm-url="{% url 'accounts_api:identity_upload_confirm' %}"{% endif %}
          data-max-bytes="{{ max_document_bytes }}">
       <div class="upload-state upload-state--empty">
         <span class="upload-icon" aria-hidden="true">
@@ -68,6 +75,6 @@
     <p class="field-error" data-upload-error role="alert"{% if not form.identity_document.errors %} hidden{% endif %}>{{ form.identity_document.errors|first }}</p>
   </div>
 
-  <button type="submit" class="button">Complete Setup</button>
+  <button type="submit" class="button">{% if resubmission %}Submit Document{% else %}Complete Setup{% endif %}</button>
 </form>
 {% endblock %}

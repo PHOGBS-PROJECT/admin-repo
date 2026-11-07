@@ -1,0 +1,61 @@
+{% extends "dashboard/app.html" %}
+{% comment %}View all staff, from design/Staff directory(all staff)/ and Staff directory(all staff - selected).{% endcomment %}
+
+{% block title %}Staff Details{% endblock %}
+{% block breadcrumb %}<li><span>People &amp; Access</span></li><li><a href="{% url 'people:directory' %}">Staff Directory</a></li><li><a href="{% url 'people:directory' %}">All Staff</a></li><li><span aria-current="page">View all staff</span></li>{% endblock %}
+
+{% block page %}
+{% with next=request.get_full_path %}
+<header class="page-header">
+  <div class="page-title-row">
+    <a class="back-link" href="{% url 'people:directory' %}" aria-label="Back to Staff Directory">{% include "dashboard/partials/icon.html" with name="arrow-left" size=28 %}</a>
+    <div>
+      <h1 class="page-title">Staff Details</h1>
+      <p class="page-lede">Manage, view assigned roles and monitor access to staff accounts</p>
+    </div>
+  </div>
+  {% if can_manage_invitations %}
+  <button type="button" class="button-primary" data-dialog-open="add-staff-dialog">{% include "dashboard/partials/icon.html" with name="plus" size=18 %}Add Staff</button>
+  {% endif %}
+</header>
+
+<section class="panel" aria-labelledby="details-heading" data-selectable-panel>
+  <div class="panel-title-row">
+    <h2 class="panel-title" id="details-heading">Staff Details</h2>
+  </div>
+  <form method="get" class="table-toolbar" role="search" data-filter-form>
+    <div class="input-search">
+      {% include "dashboard/partials/icon.html" with name="search" size=18 %}
+      <label class="visually-hidden" for="staff-search">Search staff</label>
+      <input id="staff-search" type="search" name="q" value="{{ filters.q }}" placeholder="Search staff, role, organisation…" autocomplete="off" data-search-input>
+    </div>
+    {% include "people/partials/filter_menu.html" with groups="all" %}
+  </form>
+
+  {% if can_manage_staff %}
+  <div class="selection-bar" data-selection-bar hidden>
+    <p><span data-selection-count>0</span> selected</p>
+    <div class="selection-actions">
+      <button type="button" class="button-danger-outline" data-dialog-open="suspend-dialog" data-bulk>Suspend</button>
+      <button type="button" class="link-button" data-selection-clear>Clear</button>
+    </div>
+  </div>
+  {% endif %}
+
+  <div data-loading-region>
+  {% if load_error %}
+    {% include "people/partials/table_state.html" with state="error" %}
+  {% elif page.object_list %}
+    {% include "people/partials/staff_table.html" with rows=page.object_list selectable=True %}
+    {% include "people/partials/pagination.html" %}
+  {% elif filters.is_active %}
+    {% include "people/partials/table_state.html" with state="no_results" %}
+  {% else %}
+    {% include "people/partials/table_state.html" with state="empty" %}
+  {% endif %}
+  </div>
+</section>
+
+{% include "people/partials/dialogs.html" %}
+{% endwith %}
+{% endblock %}

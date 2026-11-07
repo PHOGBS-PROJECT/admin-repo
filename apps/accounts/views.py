@@ -14,7 +14,8 @@ from django.views import View
 from django.views.generic import FormView, TemplateView
 
 from .forms import ForgotPasswordForm, IdentityForm, LoginForm, NewPasswordForm, ProfileForm
-from .models import ADMIN_ROLES, Invitation, User
+from .uploads import direct_uploads_enabled
+from .models import ADMIN_ROLES, Invitation, Organisation, User
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,8 @@ class LoginView(FormView):
         user = self.request.user
         if user.is_authenticated and user.needs_onboarding:
             return reverse("accounts:setup_profile")
+        if user.is_authenticated and user.needs_identity_resubmission:
+            return reverse("accounts:setup_identity")
         next_url = self.request.POST.get("next") or self.request.GET.get("next")
         if next_url and url_has_allowed_host_and_scheme(
             next_url, allowed_hosts={self.request.get_host()}, require_https=self.request.is_secure()
@@ -141,7 +144,7 @@ class InvitationPasswordView(FormView):
         self.invitation = _invitation_from_session(request)
         if not self.invitation:
             return _invalid_invitation(request)
-        if User.objects.filter(email__iexact=self.invitation.email).exists():
+        if User.objects.filter(email=self.invitation.email).exists():
             return _invalid_invitation(request)
         return super().dispatch(request, *args, **kwargs)
 
@@ -151,6 +154,7 @@ class InvitationPasswordView(FormView):
         kwargs["user"] = User(
             email=self.invitation.email,
             role=self.invitation.role,
+            organisation=self.invitation.organisation or Organisation.school(),
             # SRS §4.7: school and super administrators have full administrative access.
             is_staff=is_admin,
             is_superuser=is_admin,
@@ -175,8 +179,15 @@ class InvitationPasswordView(FormView):
 
 
 class SetupMixin(LoginRequiredMixin):
+    # The identity step is also reopened when an administrator asks for a
+    # new identity document.
+    allow_resubmission = False
+
     def dispatch(self, request, *args, **kwargs):
-        if request.user.is_authenticated and not request.user.needs_onboarding:
+        user = request.user
+        if user.is_authenticated and not (
+            user.needs_onboarding or (self.allow_resubmission and user.needs_identity_resubmission)
+        ):
             return redirect(settings.LOGIN_REDIRECT_URL)
         return super().dispatch(request, *args, **kwargs)
 
@@ -201,7 +212,8 @@ class SetupIdentityView(SetupMixin, FormView):
     template_name = "accounts/setup_identity.html"
     form_class = IdentityForm
     success_url = reverse_lazy("accounts:setup_complete")
-    extra_context = {"step": 2, "max_document_bytes": settings.IDENTITY_DOCUMENT_MAX_BYTES}
+    extra_context = {"max_document_bytes": settings.IDENTITY_DOCUMENT_MAX_BYTES}
+    allow_resubmission = True
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_authenticated and not request.user.has_basic_profile:
@@ -217,11 +229,32 @@ class SetupIdentityView(SetupMixin, FormView):
         kwargs["user"] = self.request.user
         return kwargs
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        context["direct_uploads"] = direct_uploads_enabled()
+        if user.needs_onboarding:
+            context["step"] = 2
+        else:
+            context["resubmission"] = {
+                "reason": user.get_resubmission_reason_display(),
+                "note": user.resubmission_note,
+            }
+        return context
+
     def form_valid(self, form):
         user = form.save()
-        user.profile_completed_at = timezone.now()
-        user.save(update_fields=["profile_completed_at"])
-        return super().form_valid(form)
+        if user.needs_onboarding:
+            user.profile_completed_at = timezone.now()
+            user.save(update_fields=["profile_completed_at"])
+            return super().form_valid(form)
+        user.resubmission_reason = ""
+        user.resubmission_note = ""
+        user.resubmission_requested_at = None
+        user.save(update_fields=["resubmission_reason", "resubmission_note",
+                                 "resubmission_requested_at"])
+        messages.success(self.request, "Thanks. Your new identity document has been submitted.")
+        return redirect(settings.LOGIN_REDIRECT_URL)
 
 
 class SetupCompleteView(LoginRequiredMixin, TemplateView):

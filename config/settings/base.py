@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "apps.accounts",
     "apps.dashboard",
+    "apps.people",
 ]
 
 MIDDLEWARE = [
@@ -36,6 +37,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.accounts.middleware.SuspendedUserMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -63,14 +65,32 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 # Database (DATABASES is set per environment)
 
-# The database cache is shared by every worker process, which the login
-# throttle relies on. Run `manage.py createcachetable` once per database.
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
-        "LOCATION": "django_cache",
+# Redis, when REDIS_URL is set, holds the cache (login throttle, API rate
+# limits, permission lookups), sessions and the background job queue, so none
+# of them load the database. Without Redis everything falls back to the
+# database: the cache table needs `manage.py createcachetable` once per
+# database, and emails are sent during the request.
+REDIS_URL = env("REDIS_URL", default="")
+
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_URL,
+            "KEY_PREFIX": "phogbs",
+            "TIMEOUT": 300,
+        }
     }
-}
+    # Sessions are read from Redis and written through to the database, so a
+    # Redis restart doesn't sign everyone out.
+    SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "django_cache",
+        }
+    }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -122,6 +142,9 @@ IDENTITY_VERIFIER = env(
     "IDENTITY_VERIFIER", default="apps.accounts.identity.NullIdentityVerifier"
 )
 IDENTITY_DOCUMENT_MAX_BYTES = 5 * 1024 * 1024
+# True when private files are in an S3 bucket (set in prod.py): uploads go
+# straight to the bucket and documents open through short-lived signed links.
+PRIVATE_FILES_SIGNED_URLS = False
 
 
 # Email (EMAIL_BACKEND is set per environment). Production sends through the
@@ -129,6 +152,22 @@ IDENTITY_DOCUMENT_MAX_BYTES = 5 * 1024 * 1024
 
 RESEND_EMAIL_BACKEND = "apps.accounts.email_backends.ResendEmailBackend"
 RESEND_API_KEY = env("RESEND_API_KEY", default="")
+
+
+# Background jobs (Celery). Emails are queued and sent by a worker process
+# (`celery -A config worker`). With no broker configured, jobs run inline
+# during the request, as before.
+
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL)
+CELERY_TASK_ALWAYS_EAGER = not CELERY_BROKER_URL
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_IGNORE_RESULT = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TIMEZONE = "Africa/Lagos"
+EMAIL_TASK_MAX_RETRIES = env.int("EMAIL_TASK_MAX_RETRIES", default=5)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="PHOGBS <no-reply@phogbs.com>")
 
 
@@ -147,6 +186,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "user": "120/minute",
         "identity_lookup": "10/minute",
+        "identity_upload": "20/hour",
     },
 }
 

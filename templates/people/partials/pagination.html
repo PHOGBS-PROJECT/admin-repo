@@ -1,0 +1,27 @@
+{% comment %}Pass page, page_range and page_query (current query string without page).{% endcomment %}
+<nav class="pagination" aria-label="Pagination">
+  <p class="pagination-status">Page <strong>{{ page.number }}</strong> of {{ page.paginator.num_pages }}</p>
+  {% if page.paginator.num_pages > 1 %}
+  <div class="pagination-controls">
+    {% if page.has_previous %}
+    <a class="page-arrow" href="?{% if page_query %}{{ page_query }}&amp;{% endif %}page={{ page.previous_page_number }}" aria-label="Previous page">{% include "dashboard/partials/icon.html" with name="chevron-left" size=18 %}</a>
+    {% else %}
+    <span class="page-arrow is-disabled" aria-hidden="true">{% include "dashboard/partials/icon.html" with name="chevron-left" size=18 %}</span>
+    {% endif %}
+    {% for number in page_range %}
+      {% if number == page.paginator.ELLIPSIS %}
+      <span class="page-ellipsis">…</span>
+      {% elif number == page.number %}
+      <span class="page-number is-current" aria-current="page">{{ number }}</span>
+      {% else %}
+      <a class="page-number" href="?{% if page_query %}{{ page_query }}&amp;{% endif %}page={{ number }}">{{ number }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if page.has_next %}
+    <a class="page-arrow" href="?{% if page_query %}{{ page_query }}&amp;{% endif %}page={{ page.next_page_number }}" aria-label="Next page">{% include "dashboard/partials/icon.html" with name="chevron-right" size=18 %}</a>
+    {% else %}
+    <span class="page-arrow is-disabled" aria-hidden="true">{% include "dashboard/partials/icon.html" with name="chevron-right" size=18 %}</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</nav>

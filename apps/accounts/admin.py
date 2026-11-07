@@ -14,7 +14,7 @@ from django.utils.html import format_html
 from .email_backends import EMAIL_ERRORS
 from .forms import clean_invitee_email
 from .invitations import invite, reissue
-from .models import Invitation, User
+from .models import Invitation, Organisation, RolePermission, User
 
 logger = logging.getLogger(__name__)
 
@@ -51,8 +51,8 @@ class UserAdmin(BaseUserAdmin):
     form = PhogbsUserChangeForm
     add_form = PhogbsUserCreationForm
     ordering = ["email"]
-    list_display = ["email", "get_full_name", "role", "is_active", "onboarded", "date_joined"]
-    list_filter = ["role", SetupFilter, "is_active", "is_staff"]
+    list_display = ["email", "get_full_name", "role", "organisation", "is_active", "onboarded", "date_joined"]
+    list_filter = ["role", "organisation", SetupFilter, "is_active", "is_staff"]
     search_fields = ["email", "first_name", "last_name"]
     readonly_fields = [
         "date_joined",
@@ -65,7 +65,7 @@ class UserAdmin(BaseUserAdmin):
     ]
     fieldsets = [
         (None, {"fields": ["email", "password"]}),
-        ("Profile", {"fields": ["first_name", "last_name", "phone", "role"]}),
+        ("Profile", {"fields": ["first_name", "last_name", "phone", "role", "organisation"]}),
         (
             "Identity",
             {
@@ -189,7 +189,7 @@ class InvitationAdmin(admin.ModelAdmin):
                 "The invitation was created but the email could not be sent. "
                 "Use the “Resend invitation” action to try again.",
             )
-            created = Invitation.objects.pending().filter(email__iexact=obj.email).first()
+            created = Invitation.objects.pending().filter(email=obj.email.strip().lower()).first()
         obj.pk = created.pk
 
     @admin.action(description="Resend invitation (sends a new link)")
@@ -209,3 +209,24 @@ class InvitationAdmin(admin.ModelAdmin):
             revoked_at=timezone.now()
         )
         self.message_user(request, f"{count} invitation(s) revoked.")
+
+
+@admin.register(Organisation)
+class OrganisationAdmin(admin.ModelAdmin):
+    list_display = ["name", "kind", "created_at"]
+    list_filter = ["kind"]
+    search_fields = ["name"]
+
+
+@admin.register(RolePermission)
+class RolePermissionAdmin(admin.ModelAdmin):
+    """Overrides set on the Roles & Permissions page; read-only here."""
+
+    list_display = ["role", "module", "level", "updated_by", "updated_at"]
+    list_filter = ["role", "module"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

@@ -72,7 +72,7 @@ def attention_items(staff, sample):
             "text": f"{n} invited staff {plural(n, 'member hasn’t', 'members haven’t')} "
                     "activated their account yet.",
             "link_text": "Review invitations",
-            "url": reverse("admin:accounts_invitation_changelist") + "?status=pending",
+            "url": reverse("people:invitations") + "?status=pending",
         })
     if staff["awaiting_setup"]:
         n = staff["awaiting_setup"]
@@ -157,7 +157,7 @@ def overview_context(user, sample):
          "link_text": "View learners", "url": soon("learners")},
         {"label": "Total Staff", "icon": "staff", "value": f"{staff['total']:,}",
          "delta": staff["delta"], "link_text": "View Staff Directory",
-         "url": reverse("admin:accounts_user_changelist")},
+         "url": reverse("people:directory")},
     ]
 
     labels = [m.strftime("%b") for m in months]

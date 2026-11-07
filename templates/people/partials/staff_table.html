@@ -1,0 +1,83 @@
+{% comment %}
+Staff rows (accounts and pending invitations). Pass rows; selectable adds
+checkboxes for bulk suspension; next is where actions return to.
+{% endcomment %}
+<div class="table-wrap">
+  <table class="table table--staff" data-select-table>
+    <thead>
+      <tr>
+        <th scope="col" class="cell-select">{% if selectable and can_manage_staff %}<input type="checkbox" class="checkbox-input" data-select-all aria-label="Select all staff on this page">{% endif %}</th>
+        <th scope="col">Name</th>
+        <th scope="col">Role(s)</th>
+        <th scope="col">Organisation</th>
+        <th scope="col">Last Active</th>
+        <th scope="col">Status</th>
+        <th scope="col"><span class="visually-hidden">Actions</span></th>
+      </tr>
+    </thead>
+    <tbody data-table-body>
+      {% for row in rows %}
+      <tr data-row>
+        <td class="cell-select">
+          {% if selectable and can_manage_staff and row.is_user and row.user.is_active and row.user != request.user %}
+          <input type="checkbox" class="checkbox-input" name="ids" value="{{ row.pk }}" data-select-row aria-label="Select {{ row.name }}">
+          {% endif %}
+        </td>
+        <th scope="row">
+          <span class="person">
+            {% if row.is_user %}<span class="person-avatar" aria-hidden="true">{{ row.initials }}</span>{% else %}<span class="person-avatar person-avatar--invited" aria-hidden="true">{% include "dashboard/partials/icon.html" with name="user" size=16 %}</span>{% endif %}
+            <span class="person-text">
+              {% if row.is_user %}<span class="person-name">{{ row.name }}</span>{% endif %}
+              <span class="person-email">{{ row.email }}</span>
+            </span>
+          </span>
+        </th>
+        <td>{% include "people/partials/role_pill.html" with role=row.role label=row.role_short %}</td>
+        <td>{{ row.organisation_name }}</td>
+        <td>{% if row.last_active %}<time datetime="{{ row.last_active|date:'c' }}">{{ row.last_active|date:"d/m/Y" }}</time>{% else %}–{% endif %}</td>
+        <td><span class="status-tag status-tag--{{ row.status }}">{{ row.status_label }}</span></td>
+        <td class="cell-actions">
+          <div class="menu" data-menu>
+            <button type="button" class="kebab" data-menu-button aria-expanded="false" aria-haspopup="true" aria-label="Actions for {{ row.name }}">
+              {% include "dashboard/partials/icon.html" with name="kebab" size=18 %}
+            </button>
+            <div class="menu-panel menu-panel--right" data-menu-panel hidden>
+              {% if row.is_user %}
+                {% if row.has_document %}
+                <button type="button" class="menu-item" data-dialog-open="document-dialog" data-src="{% url 'people:document' row.pk %}" data-name="{{ row.name }}" data-pdf="{% if row.document_is_pdf %}1{% endif %}">View ID document</button>
+                {% endif %}
+                {% if can_manage_staff and row.user != request.user and row.user.role != "super_admin" %}
+                <button type="button" class="menu-item" data-dialog-open="resubmission-dialog" data-action="{% url 'people:request_resubmission' row.pk %}" data-name="{{ row.name }}" data-email="{{ row.email }}">Request resubmission</button>
+                <button type="button" class="menu-item" data-dialog-open="role-dialog" data-action="{% url 'people:change_role' row.pk %}" data-value="{{ row.role }}">Edit role</button>
+                <button type="button" class="menu-item" data-dialog-open="organisation-dialog" data-action="{% url 'people:change_organisation' row.pk %}" data-value="{{ row.organisation_id|default:'' }}">Change organisation</button>
+                {% if row.user.is_active %}
+                <button type="button" class="menu-item menu-item--danger" data-dialog-open="suspend-dialog" data-ids="{{ row.pk }}">Suspend account</button>
+                {% else %}
+                <form method="post" action="{% url 'people:reactivate' row.pk %}">
+                  {% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
+                  <button type="submit" class="menu-item">Reactivate account</button>
+                </form>
+                {% endif %}
+                {% endif %}
+                {% if not row.has_document and not can_manage_staff %}<p class="menu-empty">No actions available</p>{% endif %}
+              {% else %}
+                <a class="menu-item" href="{% url 'people:invitations' %}?status=pending&amp;q={{ row.email|urlencode }}">View invite</a>
+                {% if can_manage_invitations %}
+                <form method="post" action="{% url 'people:resend_invitation' row.pk %}">
+                  {% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
+                  <button type="submit" class="menu-item">Resend invite</button>
+                </form>
+                <form method="post" action="{% url 'people:revoke_invitation' row.pk %}">
+                  {% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
+                  <button type="submit" class="menu-item menu-item--danger">Revoke invite</button>
+                </form>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

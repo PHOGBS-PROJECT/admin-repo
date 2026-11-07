@@ -1,0 +1,60 @@
+# Full stack for local testing of the production setup:
+#   docker compose up --build
+# then open http://localhost:8000. Create an admin with:
+#   docker compose exec web python manage.py createsuperuser
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: phogbs
+      POSTGRES_USER: phogbs
+      POSTGRES_PASSWORD: phogbs
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U phogbs"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  web:
+    build: .
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             gunicorn config.wsgi:application --config gunicorn.conf.py"
+    environment: &app-env
+      SECRET_KEY: local-compose-only-change-me
+      ALLOWED_HOSTS: localhost,127.0.0.1
+      DATABASE_URL: postgres://phogbs:phogbs@db:5432/phogbs
+      DB_CONN_MAX_AGE: "60"
+      REDIS_URL: redis://redis:6379/0
+      SECURE_SSL_REDIRECT: "False"
+      STATIC_MANIFEST: "True"
+      EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
+      MEDIA_ROOT: /app/media
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: celery -A config worker --loglevel=info --concurrency=2
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:

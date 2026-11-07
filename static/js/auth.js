@@ -215,40 +215,101 @@
         return;
       }
 
+      badge.textContent = extension === "jpeg" ? "JPG" : extension.toUpperCase();
+      setFilename(file.name);
+      setProgress(0);
+      setState("progress");
+      if (zone.dataset.presignUrl) directUpload(file);
+      else uploadThroughServer(file);
+    }
+
+    function uploadFailed(message) {
+      fileInput.value = "";
+      setState("empty");
+      showError(message || "We couldn't upload this file. Please try again.");
+    }
+
+    function errorFrom(text) {
+      try {
+        var body = JSON.parse(text);
+        if (body.document && body.document[0]) return body.document[0];
+        if (body.detail) return body.detail;
+      } catch (e) { /* not JSON */ }
+      return "";
+    }
+
+    function trackProgress(xhr) {
+      xhr.upload.addEventListener("progress", function (event) {
+        if (event.lengthComputable) setProgress(Math.round((event.loaded / event.total) * 100));
+      });
+    }
+
+    // Local storage: the file is posted to Django.
+    function uploadThroughServer(file) {
       var data = new FormData();
       data.append("document", file);
       var xhr = new XMLHttpRequest();
       xhr.open("POST", url);
       xhr.setRequestHeader("X-CSRFToken", csrfToken(form));
-      xhr.upload.addEventListener("progress", function (event) {
-        if (event.lengthComputable) setProgress(Math.round((event.loaded / event.total) * 100));
-      });
+      trackProgress(xhr);
       xhr.addEventListener("load", function () {
-        fileInput.value = "";
         if (xhr.status === 201) {
+          fileInput.value = "";
           setState("done");
-          return;
+        } else {
+          uploadFailed(errorFrom(xhr.responseText));
         }
-        setState("empty");
-        var message = "We couldn't upload this file. Please try again.";
-        try {
-          var body = JSON.parse(xhr.responseText);
-          if (body.document && body.document[0]) message = body.document[0];
-          else if (body.detail) message = body.detail;
-        } catch (e) { /* keep default message */ }
-        showError(message);
       });
       xhr.addEventListener("error", function () {
-        fileInput.value = "";
-        setState("empty");
-        showError("We couldn't upload this file. Check your connection and try again.");
+        uploadFailed("We couldn't upload this file. Check your connection and try again.");
       });
-
-      badge.textContent = extension === "jpeg" ? "JPG" : extension.toUpperCase();
-      setFilename(file.name);
-      setProgress(0);
-      setState("progress");
       xhr.send(data);
+    }
+
+    function postJSON(endpoint, payload) {
+      return fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken(form) },
+        body: JSON.stringify(payload),
+        credentials: "same-origin",
+      }).then(function (response) {
+        return response.text().then(function (text) {
+          if (!response.ok) throw new Error(errorFrom(text));
+          return JSON.parse(text);
+        });
+      });
+    }
+
+    // S3 storage: get a signed URL, PUT the file straight to the bucket,
+    // then ask the server to check and attach it.
+    function directUpload(file) {
+      postJSON(zone.dataset.presignUrl, { name: file.name, size: file.size })
+        .then(function (target) {
+          return new Promise(function (resolve, reject) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("PUT", target.url);
+            Object.keys(target.headers || {}).forEach(function (name) {
+              xhr.setRequestHeader(name, target.headers[name]);
+            });
+            trackProgress(xhr);
+            xhr.addEventListener("load", function () {
+              if (xhr.status >= 200 && xhr.status < 300) resolve(target.key);
+              else reject(new Error(""));
+            });
+            xhr.addEventListener("error", function () {
+              reject(new Error("We couldn't upload this file. Check your connection and try again."));
+            });
+            xhr.send(file);
+          });
+        })
+        .then(function (key) {
+          return postJSON(zone.dataset.confirmUrl, { key: key, name: file.name });
+        })
+        .then(function () {
+          fileInput.value = "";
+          setState("done");
+        })
+        .catch(function (error) { uploadFailed(error.message); });
     }
 
     fileInput.addEventListener("change", function () {

@@ -1,0 +1,165 @@
+{% extends "dashboard/app.html" %}
+{% comment %}Invitations, from design/Staff directory(invitations).png and Staff directory(invitations)/.{% endcomment %}
+
+{% block title %}Invitations{% endblock %}
+{% block breadcrumb %}<li><span>People &amp; Access</span></li><li><a href="{% url 'people:directory' %}">Staff Directory</a></li><li><span aria-current="page">Invitations</span></li>{% endblock %}
+
+{% block page %}
+{% with next=request.get_full_path %}
+<header class="page-header">
+  <div>
+    <h1 class="page-title">Invitations</h1>
+    <p class="page-lede">Manage staff invitations and track who has accepted, pending or expired invitations.</p>
+  </div>
+  {% if can_manage_invitations %}
+  <button type="button" class="button-primary" data-dialog-open="add-staff-dialog">{% include "dashboard/partials/icon.html" with name="plus" size=18 %}Add Staff</button>
+  {% endif %}
+</header>
+
+{% if tabs %}
+<nav class="segment-tabs" aria-label="Invitation status">
+  {% for value, label, count in tabs %}
+  <a class="segment-tab{% if value == tab %} is-selected{% endif %}" href="?{% if value %}status={{ value }}{% endif %}{% if filters.q %}{% if value %}&amp;{% endif %}q={{ filters.q|urlencode }}{% endif %}"{% if value == tab %} aria-current="page"{% endif %}>{{ label }}{% if value %} ({{ count }}){% endif %}</a>
+  {% endfor %}
+</nav>
+{% endif %}
+
+<section class="panel" aria-labelledby="details-heading" data-selectable-panel>
+  <div class="panel-title-row">
+    <h2 class="panel-title" id="details-heading">Staff Details</h2>
+    <a class="panel-link" href="{% url 'people:staff' %}">View all staff</a>
+  </div>
+  <form method="get" class="table-toolbar" role="search" data-filter-form>
+    {% if tab %}<input type="hidden" name="status" value="{{ tab }}">{% endif %}
+    <div class="input-search">
+      {% include "dashboard/partials/icon.html" with name="search" size=18 %}
+      <label class="visually-hidden" for="invite-search">Search invitations</label>
+      <input id="invite-search" type="search" name="q" value="{{ filters.q }}" placeholder="Search staff, role, organisation…" autocomplete="off" data-search-input>
+    </div>
+    {% include "people/partials/filter_menu.html" with groups="invites" %}
+  </form>
+
+  {% if can_manage_invitations %}
+  <form method="post" action="{% url 'people:invitations_bulk' %}" class="selection-bar" data-selection-bar data-bulk-form hidden>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <span data-bulk-ids></span>
+    <p><span data-selection-count>0</span> selected</p>
+    <div class="selection-actions">
+      <button type="submit" name="action" value="resend" class="button-outline">Resend</button>
+      <button type="submit" name="action" value="revoke" class="button-danger-outline">Revoke</button>
+      <button type="button" class="link-button" data-selection-clear>Clear</button>
+    </div>
+  </form>
+  {% endif %}
+
+  <div data-loading-region>
+  {% if load_error %}
+    {% include "people/partials/table_state.html" with state="error" noun="invitations" %}
+  {% elif page.object_list %}
+  <div class="table-wrap">
+    <table class="table table--staff" data-select-table>
+      <thead>
+        <tr>
+          <th scope="col" class="cell-select">{% if can_manage_invitations %}<input type="checkbox" class="checkbox-input" data-select-all aria-label="Select all invitations on this page">{% endif %}</th>
+          <th scope="col">Name</th>
+          <th scope="col">Role(s)</th>
+          <th scope="col">Organisation</th>
+          <th scope="col">Expires</th>
+          <th scope="col">Status</th>
+          <th scope="col"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody data-table-body>
+        {% for invitation in page.object_list %}
+        <tr data-row>
+          <td class="cell-select">{% if can_manage_invitations and invitation.status_value != "accepted" %}<input type="checkbox" class="checkbox-input" value="{{ invitation.pk }}" data-select-row aria-label="Select {{ invitation.email }}">{% endif %}</td>
+          <th scope="row">
+            <span class="person">
+              {% if invitation.user %}<span class="person-avatar" aria-hidden="true">{{ invitation.user.initials }}</span>{% else %}<span class="person-avatar person-avatar--invited" aria-hidden="true">{% include "dashboard/partials/icon.html" with name="user" size=16 %}</span>{% endif %}
+              <span class="person-email person-email--strong">{{ invitation.email }}</span>
+            </span>
+          </th>
+          <td>{% include "people/partials/role_pill.html" with role=invitation.role label=invitation.role_short_label %}</td>
+          <td>{{ invitation.organisation.name|default:"—" }}</td>
+          <td><time datetime="{{ invitation.expires_at|date:'c' }}">{{ invitation.expires_at|date:"d/m/Y" }}</time></td>
+          <td><span class="status-tag status-tag--{{ invitation.status_value }}">{{ invitation.status_label }}</span></td>
+          <td class="cell-actions">
+            <div class="menu" data-menu>
+              <button type="button" class="kebab" data-menu-button aria-expanded="false" aria-haspopup="true" aria-label="Actions for {{ invitation.email }}">
+                {% include "dashboard/partials/icon.html" with name="kebab" size=18 %}
+              </button>
+              <div class="menu-panel menu-panel--right" data-menu-panel hidden>
+                <button type="button" class="menu-item" data-dialog-open="invite-dialog"
+                  data-email="{{ invitation.email }}"
+                  data-status="{{ invitation.status_label }}" data-status-value="{{ invitation.status_value }}"
+                  data-role="{{ invitation.get_role_display }}"
+                  data-organisation="{{ invitation.organisation.name|default:'—' }}"
+                  data-sent="{{ invitation.created_at|date:'d/m/Y' }}"
+                  data-expires="{{ invitation.expires_at|date:'d/m/Y' }}"
+                  data-expiry-note="{{ invitation.expiry_note }}"
+                  data-inviter-name="{% if invitation.invited_by %}{{ invitation.invited_by.get_full_name|default:invitation.invited_by.email }}{% else %}—{% endif %}"
+                  data-inviter-email="{% if invitation.invited_by.get_full_name %}{{ invitation.invited_by.email }}{% endif %}"
+                  data-inviter-role="{{ invitation.invited_by.role_short_label|default:'' }}"
+                  data-inviter-role-value="{{ invitation.invited_by.role|default:'' }}"
+                  data-resend="{% if can_manage_invitations and invitation.status_value != 'accepted' %}{% url 'people:resend_invitation' invitation.pk %}{% endif %}"
+                  data-revoke="{% if can_manage_invitations and invitation.status_value == 'pending' %}{% url 'people:revoke_invitation' invitation.pk %}{% endif %}">View Invite</button>
+                {% if can_manage_invitations and invitation.status_value != "accepted" %}
+                <form method="post" action="{% url 'people:resend_invitation' invitation.pk %}">
+                  {% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
+                  <button type="submit" class="menu-item">Resend Invite</button>
+                </form>
+                {% endif %}
+                {% if can_manage_invitations and invitation.status_value == "pending" %}
+                <form method="post" action="{% url 'people:revoke_invitation' invitation.pk %}">
+                  {% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
+                  <button type="submit" class="menu-item menu-item--danger">Revoke Invite</button>
+                </form>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "people/partials/pagination.html" %}
+  {% elif filters.is_active or tab %}
+    {% include "people/partials/table_state.html" with state="no_results" noun="invitations" %}
+  {% else %}
+    {% include "people/partials/table_state.html" with state="empty" noun="invitations" %}
+  {% endif %}
+  </div>
+</section>
+
+<dialog class="modal" id="invite-dialog" aria-labelledby="invite-title" data-invite-dialog>
+  <button type="button" class="modal-close" data-dialog-close aria-label="Close">{% include "dashboard/partials/icon.html" with name="close" %}</button>
+  <h2 class="modal-title" id="invite-title">Invitation Details</h2>
+  <dl class="detail-grid">
+    <div><dt>Invitee</dt><dd data-fill="email"></dd></div>
+    <div>
+      <dt>Invited By</dt>
+      <dd><span data-fill="inviterName"></span> <span class="role-pill-sm" data-fill="inviterRole" data-role-class></span>
+        <span class="detail-sub" data-fill="inviterEmail"></span></dd>
+    </div>
+    <div><dt>Status</dt><dd class="detail-status" data-fill="status" data-status-class></dd></div>
+    <div><dt>Role</dt><dd data-fill="role"></dd></div>
+    <div><dt>Invite Sent</dt><dd data-fill="sent"></dd></div>
+    <div><dt>Invite Expires</dt><dd><span data-fill="expires"></span> <span class="detail-note" data-fill="expiryNote"></span></dd></div>
+  </dl>
+  <div class="modal-actions">
+    <form method="post" action="" data-invite-revoke>
+      {% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="button-danger-outline button-outline--block">Revoke Invite</button>
+    </form>
+    <form method="post" action="" data-invite-resend>
+      {% csrf_token %}<input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="button-primary button-primary--block">Resend Invite</button>
+    </form>
+  </div>
+</dialog>
+
+{% include "people/partials/dialogs.html" %}
+{% endwith %}
+{% endblock %}

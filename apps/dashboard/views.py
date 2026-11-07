@@ -1,10 +1,12 @@
 from django.conf import settings
+from django.core.cache import cache
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
 from django.shortcuts import redirect
 from django.views.generic import TemplateView
 
 from apps.accounts.models import STAFF_ROLES, User
+from apps.accounts.permissions import user_levels
 
 from .metrics import overview_context
 
@@ -32,19 +34,32 @@ SECTIONS = {
 
 
 class AppShellMixin(LoginRequiredMixin):
-    """Pages in the authenticated app shell. Sends users who haven't
-    finished first-time setup back to it."""
+    """Pages in the authenticated app shell.
+
+    Sends users who haven't finished first-time setup, or who have been asked
+    for a new identity document, to the setup screens. Provides the user's
+    module access levels so the navigation can hide what they can't use.
+    """
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.is_authenticated and request.user.needs_onboarding:
-            return redirect("accounts:setup_profile")
+        user = request.user
+        if user.is_authenticated:
+            if user.needs_onboarding:
+                return redirect("accounts:setup_profile")
+            if user.needs_identity_resubmission:
+                return redirect("accounts:setup_identity")
+            self.levels = user_levels(user)
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["staff_count"] = User.objects.filter(
-            is_active=True, role__in=STAFF_ROLES
-        ).count()
+        context["levels"] = self.levels
+        # Shown in the sidebar on every page; a minute out of date is fine.
+        context["staff_count"] = cache.get_or_set(
+            "sidebar-staff-count",
+            lambda: User.objects.filter(is_active=True, role__in=STAFF_ROLES).count(),
+            60,
+        )
         return context
 
 

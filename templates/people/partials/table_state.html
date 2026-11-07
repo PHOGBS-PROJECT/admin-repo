@@ -1,0 +1,20 @@
+{% load static %}{% comment %}
+Empty, no-results and error states for the staff tables.
+Pass state: "empty" | "no_results" | "error"; optional noun ("staff" or "invitations").
+{% endcomment %}
+<div class="empty-state empty-state--table">
+  <img src="{% static 'img/illustrations/documents.svg' %}" alt="" width="120" height="100">
+  {% if state == "error" %}
+    <p class="empty-state-title">We couldn’t load the {% if noun == "invitations" %}invitations{% else %}user directory{% endif %}</p>
+    <p>Something went wrong while retrieving {% if noun == "invitations" %}invitations{% else %}user accounts{% endif %}. Please try again.</p>
+    <a class="button-primary button-primary--small" href="{{ request.get_full_path }}">Try again</a>
+  {% elif state == "no_results" %}
+    <p class="empty-state-title">No {% if noun == "invitations" %}invitations{% else %}staff{% endif %} found</p>
+    <p>We couldn’t find any {% if noun == "invitations" %}invitations{% else %}staff{% endif %} matching your search or selected filters. Try adjusting your search or clearing the filter.</p>
+    <a class="link-button" href="{{ request.path }}{% if tab %}?status={{ tab }}{% endif %}">Clear search and filters</a>
+  {% else %}
+    <p class="empty-state-title">{% if noun == "invitations" %}No invitations yet{% else %}No staff yet{% endif %}</p>
+    <p>Staff details will appear here as accounts are created or invitations are accepted. Invite staff and other authorised personnel to get started.</p>
+    {% if can_manage_invitations %}<button type="button" class="button-primary button-primary--small" data-dialog-open="add-staff-dialog">{% include "dashboard/partials/icon.html" with name="send" size=18 %}Invite Staff</button>{% endif %}
+  {% endif %}
+</div>

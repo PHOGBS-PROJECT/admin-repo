@@ -1,0 +1,71 @@
+{% extends "dashboard/app.html" %}
+{% comment %}Staff Directory overview, from design/Staff directory(all staff).png.{% endcomment %}
+
+{% block title %}Staff Directory{% endblock %}
+{% block breadcrumb %}<li><span>People &amp; Access</span></li><li><span>Staff Directory</span></li><li><span aria-current="page">All Staff</span></li>{% endblock %}
+
+{% block page %}
+{% url 'people:directory' as next %}
+<header class="page-header">
+  <div>
+    <h1 class="page-title">Staff Directory</h1>
+    <p class="page-lede">Manage, view assigned roles and monitor access to staff accounts</p>
+  </div>
+  {% if can_manage_invitations %}
+  <button type="button" class="button-primary" data-dialog-open="add-staff-dialog">{% include "dashboard/partials/icon.html" with name="plus" size=18 %}Add Staff</button>
+  {% endif %}
+</header>
+
+<section class="panel" aria-labelledby="metrics-heading">
+  <div class="panel-title-row">
+    <h2 class="panel-title" id="metrics-heading">Key Metrics</h2>
+    <span class="info-tip" tabindex="0" aria-label="About these numbers">
+      {% include "dashboard/partials/icon.html" with name="info" size=18 %}
+      <span class="info-tip-text" role="tooltip">Active accounts signed in within the last 30 days. Inactive accounts haven't signed in for 30 days or have been suspended. Invited staff are counted once they accept.</span>
+    </span>
+  </div>
+  <div class="panel-body metric-grid">
+    {% for m in metrics %}
+    <article class="metric">
+      <div class="metric-body">
+        <div class="metric-head">
+          <h3 class="metric-label">{{ m.label }}</h3>
+          <span class="metric-icon">{% include "dashboard/partials/icon.html" with name=m.icon size=18 %}</span>
+        </div>
+        <p class="metric-value">{{ m.value }}</p>
+        {% if m.delta %}
+        <p class="delta delta--{{ m.delta.direction }}"><span class="delta-mark" aria-hidden="true"></span><span class="delta-value">{{ m.delta.text }}</span><span class="delta-period">vs last month</span></p>
+        {% else %}
+        <p class="delta"><span class="delta-period">{{ m.note }}</span></p>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel" aria-labelledby="details-heading">
+  <div class="panel-title-row">
+    <h2 class="panel-title" id="details-heading">Staff Details</h2>
+    <a class="panel-link" href="{% url 'people:staff' %}">View all</a>
+  </div>
+  <form method="get" action="{% url 'people:staff' %}" class="table-toolbar" role="search">
+    <div class="input-search">
+      {% include "dashboard/partials/icon.html" with name="search" size=18 %}
+      <label class="visually-hidden" for="staff-search">Search staff</label>
+      <input id="staff-search" type="search" name="q" placeholder="Search staff, role, organisation…" autocomplete="off">
+    </div>
+    {% include "people/partials/filter_menu.html" with groups="all" %}
+  </form>
+
+  {% if load_error %}
+    {% include "people/partials/table_state.html" with state="error" %}
+  {% elif rows %}
+    {% include "people/partials/staff_table.html" with selectable=False %}
+  {% else %}
+    {% include "people/partials/table_state.html" with state="empty" %}
+  {% endif %}
+</section>
+
+{% include "people/partials/dialogs.html" %}
+{% endblock %}

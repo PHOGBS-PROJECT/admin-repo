@@ -67,6 +67,57 @@ Static files are served by WhiteNoise. **Uploaded ID documents need an
 S3-compatible bucket before they will work on Vercel**, because its file
 system is read-only and wiped between requests.
 
+## Running at scale
+
+Each piece below switches on with an environment variable. Without it, the
+app behaves as on a single small server, which is how development and the
+tests run.
+
+| Setting | What it does |
+|---|---|
+| `REDIS_URL` | Redis for the cache, login throttle, API rate limits, permission lookups and sessions (sessions are also written to the database, so a Redis restart doesn't sign people out). Also the default job-queue broker. Without it these use the database (`createcachetable` needed). |
+| `CELERY_BROKER_URL` | Job queue; defaults to `REDIS_URL`. Emails (invitations, password resets, resubmission requests) are queued and sent by a worker, retrying with backoff if Resend fails. Without a broker they're sent during the request. |
+| Private S3 bucket (`SUPABASE_S3_PRIVATE_BUCKET` …) | ID documents upload straight from the browser to the bucket through a 5-minute signed link, and the document viewer redirects to a signed link, so files never pass through the app. **The bucket needs a CORS rule** allowing `PUT` from the site's origin with the `Content-Type` header. |
+| `DATABASE_URL` → a pooler | Point it at your pooler (Supabase's pooler or PgBouncer) so many app instances share a few PostgreSQL connections. For a transaction-mode pooler (Supabase port 6543) also set `DB_TRANSACTION_POOLER=True`. |
+| `DB_CONN_MAX_AGE` | Keep connections open between requests; `0` on serverless, about `60` on Gunicorn. |
+| `DATABASE_REPLICA_URL` | Read replica: reads go to it, writes go to the primary, and a browser's reads stay on the primary for 5 seconds after it changes something, so people don't see stale data (`config/db_router.py`). |
+| `SENTRY_DSN` | Error tracking and performance tracing (`SENTRY_TRACES_SAMPLE_RATE`, default 5%). Personal data isn't sent. |
+| `STATIC_URL`, `STATIC_MANIFEST` | Serve static files through a CDN; with `STATIC_MANIFEST=True` (needs `collectstatic` at build) file names are hashed and cached for a year. |
+
+**Workers need a long-running host.** Vercel can't run the Celery worker.
+Run it on a container host (Railway, Render, Fly.io, a VM) with the same
+environment variables:
+
+```sh
+celery -A config worker --loglevel=info
+```
+
+**Container hosting.** The `Dockerfile` builds one image for both the web app
+(Gunicorn, configured in `gunicorn.conf.py`) and the worker. To run the whole
+stack locally (PostgreSQL, Redis, web, worker):
+
+```sh
+docker compose up --build    # then open http://localhost:8000
+```
+
+**Database work at scale.**
+
+- Email lookups (sign-in, invitations, password reset) are exact matches on
+  the stored lowercase address, so they use the unique index.
+- Staff Directory search, filters, counts and paging run in the database.
+  Only the visible page is loaded.
+- On PostgreSQL, migration `0006` adds trigram indexes for the name, email and
+  organisation searches. It skips them with a warning if the database user
+  can't create the `pg_trgm` extension.
+
+**Load testing.** `loadtests/locustfile.py` covers the main pages. Run it
+against a staging copy, never production:
+
+```sh
+pip install -r requirements-dev.txt
+LOADTEST_ADMIN_EMAIL=... LOADTEST_ADMIN_PASSWORD=... locust -f loadtests/locustfile.py --host https://staging.example.com
+```
+
 ## How accounts work
 
 Accounts are **invite-only**:
@@ -110,19 +161,65 @@ see a placeholder until their dashboards are designed.
   each sample block in `apps/dashboard/metrics.py` with real queries as the
   modules are built.
 - **Navigation:** sidebar items for modules that don't exist yet open a
-  "coming soon" page (`/workspace/<section>/`). Staff Directory links to the
-  Django admin.
+  "coming soon" page (`/workspace/<section>/`).
 - **Charts:** plain SVG drawn by `static/js/app.js`, with hover tooltips.
+
+## Staff Directory (People & Access)
+
+Built from `design/Staff directory*` and `design/Overlay - *.png`, under
+`/people/`:
+
+| Page | What it does |
+|---|---|
+| `staff/` | Key metrics and the first staff rows |
+| `staff/all/` | All staff: search, filters (roles, organisations, last active, status), page-by-page list, bulk Suspend |
+| `invitations/` | Invitations by status (pending, accepted, expired, revoked): view details, resend, revoke |
+| `roles/` | Each role's access level (Full / Limited / View only / None) for every module |
+
+Row menus on the All staff list:
+
+- View the ID document
+- Request a resubmission (the user is emailed, then sent back to the identity step until they upload a new document)
+- Edit role
+- Change organisation
+- Suspend or reactivate
+
+**Statuses.** An account is **Active** if it signed in within 30 days,
+**Inactive** if not, and **Suspended** if an administrator suspended it.
+Suspended users are signed out on their next request. **Invited** rows are
+pending invitations that don't have an account yet.
+
+**Permissions** live in `apps/accounts/permissions.py`:
+
+- **Defaults:** each role's defaults come from the seven role screens.
+  Corporate Manager wasn't designed, so its defaults are an assumption.
+- **Overrides:** edits on the Roles & Permissions page are stored as
+  `RolePermission` rows, which override those defaults.
+- **Locked roles:** school and super administrators always have full access.
+- **What the levels do:** None hides a module and blocks its pages. View only
+  allows reading. Changes in the Staff Directory need Full.
+- **Not yet enforced:** for modules that aren't built yet, the levels only
+  show or hide sidebar items.
+
+**Organisations.** Organisations are PHOGBS, which is created automatically,
+plus corporate clients. Corporate clients are added in Django admin
+(Organisations), which the sidebar links to. Corporate managers are invited
+into a corporate organisation; everyone else belongs to PHOGBS.
+
+To see the pages filled with example data in development, run
+`python manage.py seed_demo_staff`. The demo accounts can't sign in, and the
+command refuses to run unless `DEBUG` is on.
 
 ## Layout
 
 | Path | What it holds |
 |---|---|
 | `config/` | Settings, URLs, WSGI/ASGI |
-| `apps/accounts/` | User model and roles, invitations, sign-in, password reset, onboarding, accounts API |
-| `apps/dashboard/` | Placeholder dashboard (no design yet) |
+| `apps/accounts/` | User model, roles and permissions, organisations, invitations, sign-in, password reset, onboarding, accounts API |
+| `apps/dashboard/` | App shell, Overview dashboard, "coming soon" pages |
+| `apps/people/` | Staff Directory: staff list, invitations, roles & permissions |
 | `templates/` | Page and email templates |
-| `static/` | `css/auth.css`, `js/auth.js`, logo |
+| `static/` | Styles (`auth.css`, `app.css`, `people.css`), scripts, logo |
 
 ### API (`/api/v1/`)
 

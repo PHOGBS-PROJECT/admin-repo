@@ -4,14 +4,24 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Invitation
+from .models import Invitation, Organisation, UserManager
+from .tasks import queue_email
 
 
-def invite(email, role, invited_by, request):
-    """Create an invitation, revoking any earlier pending one, and email it."""
+def invite(email, role, invited_by, request, organisation=None):
+    """Create an invitation, revoking any earlier pending one, and email it.
+
+    Staff belong to PHOGBS unless an organisation is given.
+    """
+    email = UserManager.normalize_email(email)
     with transaction.atomic():
-        Invitation.objects.pending().filter(email__iexact=email).update(revoked_at=timezone.now())
-        invitation = Invitation(email=email, role=role, invited_by=invited_by)
+        Invitation.objects.pending().filter(email=email).update(revoked_at=timezone.now())
+        invitation = Invitation(
+            email=email,
+            role=role,
+            invited_by=invited_by,
+            organisation=organisation or Organisation.school(),
+        )
         raw_token = invitation.issue_token()
         invitation.save()
     send_invitation_email(invitation, raw_token, request)
@@ -38,4 +48,4 @@ def send_invitation_email(invitation, raw_token, request):
     html = render_to_string("accounts/emails/invitation.html", context)
     message = EmailMultiAlternatives(subject, body, to=[invitation.email])
     message.attach_alternative(html, "text/html")
-    message.send()
+    queue_email(message)

@@ -20,6 +20,17 @@ DATABASES = {
 
 DASHBOARD_SAMPLE_DATA = env.bool("DASHBOARD_SAMPLE_DATA", default=True)
 
+# Uploads stay on local disk in development; prod.py uses S3 buckets.
+# Identity documents go under media/private/ and are never served directly.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "private": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "OPTIONS": {"location": str(BASE_DIR / "media" / "private"), "base_url": None},
+    },
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
+
 # Print emails (invitations, password resets) to the console. To send real
 # email from dev, set EMAIL_BACKEND=apps.accounts.email_backends.ResendEmailBackend.
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
@@ -27,3 +38,13 @@ EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.
 if sys.argv[1:2] == ["test"]:
     # Real hashers are deliberately slow; tests don't need that.
     PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+    # Tests must not share state through Redis (it isn't rolled back between
+    # tests), so they always use the database cache and send emails inline.
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "django_cache",
+        }
+    }
+    SESSION_ENGINE = "django.contrib.sessions.backends.db"
+    CELERY_TASK_ALWAYS_EAGER = True

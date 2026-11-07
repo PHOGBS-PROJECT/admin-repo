@@ -97,7 +97,7 @@ has the design's empty state for when there's no data.
     <h2 class="panel-title" id="actions-heading">Quick Actions</h2>
     <div class="panel-body">
       <ul class="quick-actions">
-        <li><a class="quick-action" href="{% url 'admin:accounts_invitation_add' %}"><span class="quick-action-icon">{% include "dashboard/partials/icon.html" with name="plus" size=18 %}</span>Invite Staff</a></li>
+        <li><a class="quick-action" href="{% url 'people:directory' %}?add=1"><span class="quick-action-icon">{% include "dashboard/partials/icon.html" with name="plus" size=18 %}</span>Invite Staff</a></li>
         <li><a class="quick-action" href="{% url 'dashboard:coming_soon' 'programmes' %}"><span class="quick-action-icon">{% include "dashboard/partials/icon.html" with name="plus" size=18 %}</span>Create Programme</a></li>
         <li><a class="quick-action" href="{% url 'dashboard:coming_soon' 'learners' %}"><span class="quick-action-icon">{% include "dashboard/partials/icon.html" with name="list" size=18 %}</span>View Learners</a></li>
         <li><a class="quick-action" href="{% url 'dashboard:coming_soon' 'reports' %}"><span class="quick-action-icon">{% include "dashboard/partials/icon.html" with name="report" size=18 %}</span>View Reports</a></li>

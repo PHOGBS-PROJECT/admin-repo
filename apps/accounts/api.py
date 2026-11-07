@@ -8,8 +8,10 @@ mobile client is built.
 import logging
 import smtplib
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from rest_framework import permissions, serializers, status
+from rest_framework.exceptions import NotFound
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -19,6 +21,7 @@ from .email_backends import EMAIL_ERRORS
 from .forms import InvitationForm, lookup_identity_name
 from .invitations import invite
 from .models import IdentityMethod, Invitation, User
+from .uploads import confirm_identity_upload, direct_uploads_enabled, presign_identity_upload
 from .validators import validate_identity_document, validate_identity_number
 
 logger = logging.getLogger(__name__)
@@ -75,15 +78,15 @@ class IdentityDocumentSerializer(serializers.Serializer):
 class IdentityDocumentView(APIView):
     """Upload or remove the signed-in user's identity document.
 
-    Only allowed during account setup; afterwards documents are changed by
-    an administrator.
+    Only allowed during account setup, or when an administrator has asked
+    for a new document.
     """
 
     parser_classes = [MultiPartParser]
 
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
-        if not request.user.needs_onboarding:
+        if not request.user.can_edit_identity:
             self.permission_denied(request, message="Your account setup is already complete.")
 
     def post(self, request):
@@ -106,6 +109,64 @@ class IdentityDocumentView(APIView):
         user.delete_identity_document()
         user.save(update_fields=["identity_document", "identity_document_name"])
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DirectUploadMixin:
+    """Only for users who may change their identity document, and only when
+    private files live in an S3 bucket."""
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if not direct_uploads_enabled():
+            raise NotFound
+        if not request.user.can_edit_identity:
+            self.permission_denied(request, message="Your account setup is already complete.")
+
+
+class IdentityUploadUrlSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    size = serializers.IntegerField(min_value=1)
+
+
+class IdentityUploadUrlView(DirectUploadMixin, APIView):
+    """Step 1 of a direct upload: a signed URL the browser PUTs the file to."""
+
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "identity_upload"
+
+    def post(self, request):
+        serializer = IdentityUploadUrlSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            upload = presign_identity_upload(
+                request.user, serializer.validated_data["name"], serializer.validated_data["size"]
+            )
+        except DjangoValidationError as error:
+            return Response({"document": error.messages}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(upload)
+
+
+class IdentityUploadConfirmSerializer(serializers.Serializer):
+    key = serializers.CharField(max_length=500)
+    name = serializers.CharField(max_length=255)
+
+
+class IdentityUploadConfirmView(DirectUploadMixin, APIView):
+    """Step 2: check the uploaded object and attach it to the user."""
+
+    def post(self, request):
+        serializer = IdentityUploadConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            size = confirm_identity_upload(
+                request.user, serializer.validated_data["key"], serializer.validated_data["name"]
+            )
+        except DjangoValidationError as error:
+            return Response({"document": error.messages}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"name": request.user.identity_document_name, "size": size},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class CanInviteUsers(permissions.BasePermission):

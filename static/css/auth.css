@@ -743,3 +743,24 @@ body {
     transition: none !important;
   }
 }
+
+/* Identity resubmission request */
+
+.resubmission-note {
+  margin: 0 0 24px;
+  padding: 12px 14px;
+  font-size: 14px;
+  color: #93370d;
+  background: #fef6e7;
+  border: 1px solid #f7d39b;
+  border-radius: 8px;
+}
+
+.resubmission-reason {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.resubmission-note p {
+  margin: 0;
+}
