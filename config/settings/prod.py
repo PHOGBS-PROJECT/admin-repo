@@ -140,6 +140,9 @@ AWS_PRIVATE_BUCKET_NAME = os.getenv("SUPABASE_S3_PRIVATE_BUCKET")
 AWS_S3_ENDPOINT_URL = os.getenv("SUPABASE_S3_ENDPOINT_URL") or os.getenv("S3_ENDPOINT_URL")
 AWS_S3_REGION_NAME = os.getenv("SUPABASE_S3_REGION_NAME") or os.getenv("S3_REGION", "auto")
 AWS_S3_ADDRESSING_STYLE = "path"
+# Signed links must use Signature Version 4: Supabase (like most
+# S3-compatible stores) rejects the older v2 links as "Missing signature".
+AWS_S3_SIGNATURE_VERSION = "s3v4"
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = None
 AWS_LOCATION = "media"
